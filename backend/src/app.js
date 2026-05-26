@@ -20,6 +20,9 @@ const adminRoutes = require('./routes/admin');
 
 const app = express();
 
+// Trust the first proxy (nginx/Traefik in production)
+app.set('trust proxy', 1);
+
 // Connect to MongoDB
 connectDB().catch((err) => {
   console.error('MongoDB connection failed:', err.message);
