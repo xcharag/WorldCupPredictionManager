@@ -5,8 +5,8 @@ import { useAuth } from '../contexts/AuthContext'
 const NAV = [
   { to: '/groups', icon: Users, label: 'Grupos' },
   { to: '/matches', icon: Swords, label: 'Partidos' },
-  { to: '/tournament', icon: Star, label: 'Torneo' },
   { to: '/', icon: Home, label: 'Inicio', exact: true },
+  { to: '/tournament', icon: Star, label: 'Torneo' },
   { to: '/leaderboard', icon: Trophy, label: 'Ranking' },
 ]
 
