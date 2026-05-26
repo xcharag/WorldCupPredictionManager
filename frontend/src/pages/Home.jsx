@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Users, Swords, Star, UserPen, X } from 'lucide-react'
+import { Trophy, Users, Swords, Star, SquarePen, X } from 'lucide-react'
 import api from '../services/api'
 
 export default function Home() {
@@ -24,7 +24,7 @@ export default function Home() {
             onClick={() => setEditOpen(true)}
             className="flex items-center gap-1 text-brand-muted text-sm active:text-brand-text"
           >
-            <UserPen size={15} /> Editar perfil
+            <SquarePen size={15} /> Editar perfil
           </button>
           <button onClick={logout} className="text-brand-muted text-sm active:text-brand-text">
             Salir
