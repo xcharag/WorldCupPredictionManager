@@ -1,8 +1,12 @@
 const cron = require('node-cron');
 const Match = require('../models/Match');
 const User = require('../models/User');
+const Player = require('../models/Player');
+const Team = require('../models/Team');
 const MatchReminder = require('../models/MatchReminder');
 const { sendMatchReminderEmail } = require('./email');
+const fd = require('./footballdata');
+const { calculateMatchPredictions } = require('./scoring');
 
 // How many minutes before/after the exact timing window we check.
 // Cron runs every 5 min, so ±4 min window catches every match.
@@ -51,8 +55,129 @@ async function sendPendingReminders() {
   }
 }
 
+// ─── football-data.org status → app status ───────────────────────────────────
+function mapFdStatus(apiStatus) {
+  if (['IN_PLAY', 'PAUSED', 'LIVE'].includes(apiStatus)) return 'in_progress';
+  if (apiStatus === 'FINISHED') return 'finished';
+  return 'scheduled';
+}
+
+// ─── Position mapping (same as in the seed script) ───────────────────────────
+const POSITION_MAP = {
+  Goalkeeper:           'GK',
+  Defence:              'DEF',
+  'Centre-Back':        'DEF',
+  'Left-Back':          'DEF',
+  'Right-Back':         'DEF',
+  Midfield:             'MID',
+  'Central Midfield':   'MID',
+  'Defensive Midfield': 'MID',
+  'Attacking Midfield': 'MID',
+  'Left Midfield':      'MID',
+  'Right Midfield':     'MID',
+  'Wide Midfield':      'MID',
+  Offence:              'FWD',
+  'Centre-Forward':     'FWD',
+  'Left Winger':        'FWD',
+  'Right Winger':       'FWD',
+  'Second Striker':     'FWD',
+};
+const TLA_REMAP = { URY: 'URU', SAU: 'KSA', DRC: 'COD' };
+
+function normPos(apiPos) { return POSITION_MAP[apiPos] || 'MID'; }
+
+// ─── Live score polling ───────────────────────────────────────────────────────
+// Called every minute. Finds matches that are live or just started, then calls
+// the football-data.org /matches/:id endpoint for each and updates MongoDB.
+// API calls are naturally throttled by the 6.2 s delay in footballdata.js.
+async function syncLiveMatches() {
+  if (!process.env.FOOTBALL_DATA_API_KEY) return;
+
+  const now = new Date();
+  // Also check scheduled matches whose kickoff was in the last 15 minutes
+  // (they may have just gone IN_PLAY before our DB status was updated).
+  const recentStart = new Date(now.getTime() - 15 * 60 * 1000);
+
+  const candidates = await Match.find({
+    footballDataId: { $exists: true, $ne: null },
+    $or: [
+      { status: 'in_progress' },
+      { status: 'scheduled', matchDate: { $lte: now, $gte: recentStart } },
+    ],
+  });
+
+  if (!candidates.length) return;
+
+  for (const match of candidates) {
+    try {
+      const { match: apiMatch } = await fd.getMatch(match.footballDataId);
+      const newStatus = mapFdStatus(apiMatch.status);
+      const score = apiMatch.score?.fullTime;
+
+      const wasFinished = match.status === 'finished';
+
+      match.status = newStatus;
+      if (score) {
+        if (score.home !== null) match.homeScore = score.home;
+        if (score.away !== null) match.awayScore = score.away;
+      }
+      await match.save();
+
+      // Trigger prediction scoring when a match transitions to finished
+      if (!wasFinished && newStatus === 'finished') {
+        try {
+          await calculateMatchPredictions(match._id);
+          console.log(`[Scheduler] Scored predictions for match ${match._id}`);
+        } catch (scoringErr) {
+          console.error(`[Scheduler] Scoring error for match ${match._id}:`, scoringErr.message);
+        }
+      }
+    } catch (err) {
+      console.error(`[Scheduler] Live update failed for match ${match._id}:`, err.message);
+    }
+  }
+}
+
+// ─── Team roster sync ─────────────────────────────────────────────────────────
+// Called every hour. Re-fetches all 48 WC squads (1 API call) and upserts
+// players so that late call-ups and substitutions stay current.
+async function syncTeamRosters() {
+  if (!process.env.FOOTBALL_DATA_API_KEY) return;
+
+  let updated = 0;
+  try {
+    const { teams } = await fd.getWCTeams();
+    for (const apiTeam of teams) {
+      const tla      = apiTeam.tla;
+      const fifaCode = TLA_REMAP[tla] || tla;
+      const dbTeam   = await Team.findOne({ fifaCode });
+      if (!dbTeam) continue;
+
+      for (const p of apiTeam.squad || []) {
+        const playerUpdate = {
+          name:     p.name,
+          team:     dbTeam._id,
+          position: normPos(p.position),
+          isActive: true,
+        };
+        if (p.dateOfBirth) playerUpdate.dateOfBirth = new Date(p.dateOfBirth);
+
+        await Player.findOneAndUpdate(
+          { footballDataId: String(p.id) },
+          { $set: playerUpdate },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+        updated++;
+      }
+    }
+    console.log(`[Scheduler] Roster sync complete — ${updated} players upserted`);
+  } catch (err) {
+    console.error('[Scheduler] Roster sync failed:', err.message);
+  }
+}
+
 function startScheduler() {
-  // Run every 5 minutes
+  // ── Match reminders (every 5 min) ──────────────────────────────────────────
   cron.schedule('*/5 * * * *', async () => {
     try {
       await sendPendingReminders();
@@ -61,6 +186,26 @@ function startScheduler() {
     }
   });
   console.log('[Scheduler] Match reminder cron started (every 5 min)');
+
+  // ── Live score updates (every 1 min) ───────────────────────────────────────
+  cron.schedule('* * * * *', async () => {
+    try {
+      await syncLiveMatches();
+    } catch (err) {
+      console.error('[Scheduler] Live-score sync error:', err.message);
+    }
+  });
+  console.log('[Scheduler] Live-score cron started (every 1 min)');
+
+  // ── Team roster refresh (every 1 hour) ─────────────────────────────────────
+  cron.schedule('0 * * * *', async () => {
+    try {
+      await syncTeamRosters();
+    } catch (err) {
+      console.error('[Scheduler] Roster sync error:', err.message);
+    }
+  });
+  console.log('[Scheduler] Team-roster cron started (every 1 h)');
 }
 
 module.exports = { startScheduler };

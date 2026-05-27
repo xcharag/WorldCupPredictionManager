@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader'
 import { TournamentPredictionsSkeleton } from '../components/Skeletons'
 import { useToast, ToastContainer } from '../components/Toast'
 import SearchableSelect from '../components/SearchableSelect'
-import { Lock } from 'lucide-react'
+import { Lock, Clock } from 'lucide-react'
 import { celebratePredictionSaved } from '../utils/confetti'
 
 const FIELDS = [
@@ -27,6 +27,8 @@ export default function TournamentPredictions({ embedded = false }) {
   const [players, setPlayers] = useState([])
   const [prediction, setPrediction] = useState(null)
   const [isLocked, setIsLocked] = useState(false)
+  const [lockAt, setLockAt] = useState(null)
+  const [nowMs, setNowMs] = useState(Date.now())
   const [form, setForm] = useState({
     champion: '', runnerUp: '', topScorer: '', topAssister: '',
     mostYellowCards: '', mostRedCards: '',
@@ -43,6 +45,7 @@ export default function TournamentPredictions({ embedded = false }) {
       setTeams(teamRes.data)
       setPlayers(playerRes.data)
       setIsLocked(predRes.data.isLocked)
+      if (predRes.data.lockAt) setLockAt(new Date(predRes.data.lockAt))
       if (predRes.data.prediction) {
         const p = predRes.data.prediction
         setPrediction(p)
@@ -57,6 +60,30 @@ export default function TournamentPredictions({ embedded = false }) {
       }
     }).finally(() => setLoading(false))
   }, [])
+
+  // Live countdown tick
+  useEffect(() => {
+    if (!lockAt || isLocked) return
+    const id = setInterval(() => setNowMs(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [lockAt, isLocked])
+
+  const countdownStr = (() => {
+    if (!lockAt || isLocked) return null
+    const ms = lockAt.getTime() - nowMs
+    if (ms <= 0) return null
+    const totalSecs = Math.floor(ms / 1000)
+    const d = Math.floor(totalSecs / 86400)
+    const h = Math.floor((totalSecs % 86400) / 3600)
+    const m = Math.floor((totalSecs % 3600) / 60)
+    const s = totalSecs % 60
+    const parts = []
+    if (d > 0) parts.push(`${d}d`)
+    if (h > 0 || d > 0) parts.push(`${h}h`)
+    parts.push(`${String(m).padStart(2, '0')}m`)
+    parts.push(`${String(s).padStart(2, '0')}s`)
+    return parts.join(' ')
+  })()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -87,6 +114,16 @@ export default function TournamentPredictions({ embedded = false }) {
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       <div className={embedded ? 'pt-2' : 'px-4 pt-4'}>
+        {countdownStr && (
+          <div className="bg-brand-surface border border-brand-border rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+            <Clock size={18} className="text-brand-primary flex-shrink-0" />
+            <div>
+              <p className="text-xs text-brand-muted leading-none mb-0.5">Se cierra en</p>
+              <p className="text-base font-mono font-bold text-brand-primary leading-none">{countdownStr}</p>
+            </div>
+          </div>
+        )}
+
         {isLocked && (
           <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-3 mb-4 flex items-center gap-2">
             <Lock size={16} className="text-amber-400 flex-shrink-0" />
