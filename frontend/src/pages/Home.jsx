@@ -1,12 +1,71 @@
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Users, Swords, Star, Moon, Sun } from 'lucide-react'
+import { Trophy, Users, Swords, Star, Moon, Sun, Clock, ChevronRight } from 'lucide-react'
+import api from '../services/api'
+
+const TOURNAMENT_FIELDS = ['champion', 'runnerUp', 'topScorer', 'topAssister', 'mostYellowCards', 'mostRedCards']
+
+function getTimeLeft(targetDate) {
+  if (!targetDate) return null
+  const diff = new Date(targetDate) - Date.now()
+  if (diff <= 0) return null
+  return {
+    d: Math.floor(diff / 86400000),
+    h: Math.floor((diff % 86400000) / 3600000),
+    m: Math.floor((diff % 3600000) / 60000),
+    s: Math.floor((diff % 60000) / 1000),
+  }
+}
+
+function formatCountdown(t) {
+  if (!t) return 'Pronto'
+  if (t.d > 0) return `${t.d}d ${t.h}h`
+  if (t.h > 0) return `${t.h}h ${t.m}m`
+  return `${t.m}m ${t.s}s`
+}
 
 export default function Home() {
   const { user, logout, setUser } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
+
+  const [nextUnpredicted, setNextUnpredicted] = useState(null)
+  const [tournamentPending, setTournamentPending] = useState(null)
+  const [countdown, setCountdown] = useState(null)
+  const [pendingLoading, setPendingLoading] = useState(true)
+
+  useEffect(() => {
+    const now = Date.now()
+    Promise.all([
+      api.get('/matches'),
+      api.get('/predictions/mine'),
+      api.get('/predictions/tournament'),
+    ]).then(([matchesRes, predictionsRes, tournRes]) => {
+      const predicted = new Set(
+        predictionsRes.data.map(p => typeof p.match === 'string' ? p.match : p.match?._id)
+      )
+      const upcoming = matchesRes.data
+        .filter(m => m.status === 'scheduled' && new Date(m.matchDate) > now && !predicted.has(m._id))
+        .sort((a, b) => new Date(a.matchDate) - new Date(b.matchDate))
+      if (upcoming.length > 0) {
+        setNextUnpredicted({ match: upcoming[0], count: upcoming.length })
+        setCountdown(getTimeLeft(upcoming[0].matchDate))
+      }
+      const { isLocked, prediction } = tournRes.data
+      if (!isLocked) {
+        const missing = prediction ? TOURNAMENT_FIELDS.filter(f => !prediction[f]).length : 6
+        if (missing > 0) setTournamentPending({ missingCount: missing })
+      }
+    }).catch(() => {}).finally(() => setPendingLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (!nextUnpredicted) return
+    const id = setInterval(() => setCountdown(getTimeLeft(nextUnpredicted.match.matchDate)), 1000)
+    return () => clearInterval(id)
+  }, [nextUnpredicted])
 
   return (
     <div className="min-h-screen bg-brand-bg" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
@@ -58,6 +117,64 @@ export default function Home() {
             </p>
           </div>
         )}
+
+        {/* Pending */}
+        {pendingLoading ? (
+          <div className="mb-5 animate-pulse">
+            <div className="h-2.5 w-20 rounded-full bg-brand-elevated mb-2" />
+            <div className="card flex items-center gap-3 px-4 py-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-elevated flex-shrink-0" />
+              <div className="flex-1 flex flex-col gap-1.5">
+                <div className="h-3.5 w-32 rounded bg-brand-elevated" />
+                <div className="h-2.5 w-48 rounded bg-brand-elevated" />
+              </div>
+            </div>
+          </div>
+        ) : (nextUnpredicted || tournamentPending) ? (
+          <div className="mb-5">
+            <p className="text-xs font-bold text-red-400 uppercase tracking-widest mb-2">⚠ Pendiente</p>
+            <div className="flex flex-col gap-2">
+              {nextUnpredicted && (
+                <button
+                  onClick={() => navigate('/matches?filter=unpredicted')}
+                  className="card border border-red-500/30 bg-red-500/5 flex items-center gap-3 text-left active:bg-red-500/10 w-full"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                    <Clock size={18} className="text-red-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-brand-text">
+                      {nextUnpredicted.count === 1 ? '1 partido sin predecir' : `${nextUnpredicted.count} partidos sin predecir`}
+                    </p>
+                    <p className="text-xs text-brand-muted truncate">
+                      Próximo: {nextUnpredicted.match.homeTeam?.name} vs {nextUnpredicted.match.awayTeam?.name} · en {countdown ? formatCountdown(countdown) : '...'}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-red-400 flex-shrink-0" />
+                </button>
+              )}
+              {tournamentPending && (
+                <button
+                  onClick={() => navigate('/tournament')}
+                  className="card border border-red-500/30 bg-red-500/5 flex items-center gap-3 text-left active:bg-red-500/10 w-full"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                    <Trophy size={18} className="text-red-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-brand-text">Tops del torneo incompletos</p>
+                    <p className="text-xs text-brand-muted">
+                      {tournamentPending.missingCount === 6
+                        ? 'Aún no completaste tus predicciones del torneo'
+                        : `Faltan ${tournamentPending.missingCount} de 6 campos`}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-red-400 flex-shrink-0" />
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3 mb-6">
