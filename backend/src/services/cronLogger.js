@@ -3,8 +3,8 @@
  *
  * Wraps cron job functions with:
  *  - In-memory registry  (status, last run, next run)
- *  - In-memory ring buffer of recent runs (last 100 per job)
- *  - MinIO persistence for every non-trivial run (durationMs > 50ms) and all errors
+ *  - In-memory storage of the most recent run (1 per job)
+ *  - MinIO persistence for errors only
  *  - Nightly cleanup of MinIO log files older than 7 days
  *
  * Usage:
@@ -18,8 +18,6 @@ const minioClient = require('../config/minio');
 
 const BUCKET      = process.env.MINIO_BUCKET || 'worldcup2026';
 const LOG_PREFIX  = 'logs/cron/';
-const MAX_MEM     = 100;   // ring-buffer size per job
-const MIN_MINIO_MS = 50;   // skip MinIO for runs faster than this (no-ops)
 
 // ── In-memory state ────────────────────────────────────────────────────────────
 const registry = {};   // { name → JobDef }
@@ -155,11 +153,8 @@ function wrap(name, fn) {
     } finally {
       if (job) job.running = false;
 
-      // Ring buffer (newest first)
-      if (ringBuf[name]) {
-        ringBuf[name].unshift(entry);
-        if (ringBuf[name].length > MAX_MEM) ringBuf[name].length = MAX_MEM;
-      }
+      // Keep only the latest run in memory (overwrite previous)
+      ringBuf[name] = [entry];
 
       // MinIO: only persist errors
       const shouldPersist = entry.status === 'error';
