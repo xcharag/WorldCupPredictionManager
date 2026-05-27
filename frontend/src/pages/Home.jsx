@@ -68,7 +68,7 @@ export default function Home() {
   }, [nextUnpredicted])
 
   return (
-    <div className="min-h-screen bg-brand-bg" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="min-h-screen bg-brand-bg" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
 
       {/* Hero Banner */}
       <div className="relative h-44 overflow-hidden">

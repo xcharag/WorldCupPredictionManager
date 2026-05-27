@@ -58,7 +58,7 @@ html.dark {
 @layer components {
   .page {
     @apply min-h-screen bg-brand-bg;
-    padding-bottom: calc(80px + var(--safe-area-inset-bottom));
+    padding-bottom: calc(96px + var(--safe-area-inset-bottom));
   }
 
   .page-no-nav {

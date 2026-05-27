@@ -21,6 +21,7 @@ export default function PredictionForm() {
   const navigate = useNavigate()
   const { toasts, addToast, removeToast } = useToast()
   const backPath = groupId ? `/groups/${groupId}/matches` : '/matches'
+  const handleBack = () => (window.history.length > 1 ? navigate(-1) : navigate(backPath))
 
   const [match, setMatch] = useState(null)
   const [prediction, setPrediction] = useState(null)
@@ -164,7 +165,7 @@ export default function PredictionForm() {
 
         {/* Back button */}
         <button
-          onClick={() => navigate(backPath)}
+          onClick={handleBack}
           className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
         >
           <ArrowLeft size={18} />
