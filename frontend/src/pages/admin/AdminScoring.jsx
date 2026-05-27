@@ -27,7 +27,7 @@ export default function AdminScoring() {
     try {
       await api.post('/admin/settings/lock-tournament', { locked: !settings.tournamentPredictionsLocked })
       setSettings(s => ({ ...s, tournamentPredictionsLocked: !s.tournamentPredictionsLocked }))
-      addToast(`Pronosticos del torneo ${settings.tournamentPredictionsLocked ? 'desbloqueados' : 'bloqueados'}`, 'success')
+      addToast(`Pronosticos tops del torneo ${settings.tournamentPredictionsLocked ? 'desbloqueados' : 'bloqueados'}`, 'success')
     } catch { addToast('Error', 'error') }
     finally { setWorking(false) }
   }

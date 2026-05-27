@@ -12,6 +12,7 @@ export default function GroupDashboard() {
   const { user } = useAuth()
   const [group, setGroup] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [confirmDialog, setConfirmDialog] = useState(null)
 
   useEffect(() => {
     api.get(`/groups/${groupId}`)
@@ -24,17 +25,25 @@ export default function GroupDashboard() {
   if (!group) return null
   const isCreator = group.creator?._id === user?._id
 
-  async function removeMember(memberId) {
-    if (!window.confirm('Seguro que deseas eliminar este miembro del grupo?')) return
-    await api.delete(`/groups/${groupId}/members/${memberId}`)
-    const updated = await api.get(`/groups/${groupId}`)
-    setGroup(updated.data)
+  function removeMember(memberId) {
+    setConfirmDialog({
+      message: 'Seguro que deseas eliminar este miembro del grupo?',
+      onConfirm: async () => {
+        await api.delete(`/groups/${groupId}/members/${memberId}`)
+        const updated = await api.get(`/groups/${groupId}`)
+        setGroup(updated.data)
+      },
+    })
   }
 
-  async function deleteGroup() {
-    if (!window.confirm('Seguro que deseas eliminar este grupo? Esta accion no se puede deshacer.')) return
-    await api.delete(`/groups/${groupId}`)
-    navigate('/groups')
+  function deleteGroup() {
+    setConfirmDialog({
+      message: 'Seguro que deseas eliminar este grupo? Esta accion no se puede deshacer.',
+      onConfirm: async () => {
+        await api.delete(`/groups/${groupId}`)
+        navigate('/groups')
+      },
+    })
   }
 
   const actions = [
@@ -47,7 +56,7 @@ export default function GroupDashboard() {
     },
     {
       icon: <Trophy size={24} className="text-purple-400" />,
-      title: 'Pronosticos del torneo',
+      title: 'Pronosticos tops del torneo',
       desc: 'Campeon, goleador y mas',
       to: `/groups/${groupId}/tournament`,
       color: 'border-purple-500/20',
@@ -120,6 +129,28 @@ export default function GroupDashboard() {
           ))}
         </div>
       </div>
+
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/60 backdrop-blur-sm sm:items-center">
+          <div className="card w-full max-w-xs p-5">
+            <p className="text-sm text-brand-text text-center leading-relaxed mb-5">{confirmDialog.message}</p>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 py-2.5 rounded-xl bg-brand-elevated text-brand-text text-sm font-semibold"
+                onClick={() => setConfirmDialog(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="flex-1 btn-danger"
+                onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
