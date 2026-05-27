@@ -80,7 +80,7 @@ export default function TournamentPredictions({ embedded = false }) {
       {!embedded && (
         <PageHeader
           title="Pronosticos tops del torneo"
-          subtitle="Se bloquea al iniciar la fase de grupos"
+          subtitle="Se bloquea al finalizar el primer partido"
           onBack={() => navigate(backPath)}
         />
       )}
@@ -90,7 +90,7 @@ export default function TournamentPredictions({ embedded = false }) {
         {isLocked && (
           <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-3 mb-4 flex items-center gap-2">
             <Lock size={16} className="text-amber-400 flex-shrink-0" />
-            <p className="text-sm text-amber-300">Los pronosticos estan bloqueados porque ya inicio la fase de grupos.</p>
+            <p className="text-sm text-amber-300">Los pronosticos estan bloqueados porque ya hay un partido finalizado.</p>
           </div>
         )}
 
