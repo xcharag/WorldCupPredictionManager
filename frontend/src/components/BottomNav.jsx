@@ -64,6 +64,16 @@ export default function BottomNav() {
           </NavLink>
         )}
       </div>
+      <div className="text-center pb-0.5">
+        <a
+          href="https://xchar.site"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[9px] text-brand-muted/50 hover:text-brand-muted transition-colors"
+        >
+          Desarrollado por xchar
+        </a>
+      </div>
     </nav>
   )
 }

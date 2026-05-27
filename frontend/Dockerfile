@@ -1,6 +1,10 @@
 # ── Stage 1: build ───────────────────────────────────────
 FROM node:20-alpine AS builder
 
+# Build-time env vars (Vite bakes these into the bundle)
+ARG VITE_MINIO_ENDPOINT
+ENV VITE_MINIO_ENDPOINT=$VITE_MINIO_ENDPOINT
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci

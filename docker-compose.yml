@@ -62,6 +62,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_MINIO_ENDPOINT: ${VITE_MINIO_ENDPOINT:-}
     restart: unless-stopped
     expose:
       - "80"
