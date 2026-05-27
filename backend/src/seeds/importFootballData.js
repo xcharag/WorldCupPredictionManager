@@ -139,14 +139,19 @@ async function linkMatches() {
     ]);
     if (!homeTeam || !awayTeam) { missed++; continue; }
 
-    // Match the DB record by teams + date within a ±90-minute window
+    // Match the DB record by teams + date within a ±13-hour window.
+    // The window is intentionally wide because football-data.org and TheSportsDB
+    // sometimes store different UTC times for the same fixture (timezone discrepancies).
+    // We also try both home/away orderings since the two sources sometimes swap them.
     const matchDate   = new Date(apiMatch.utcDate);
-    const windowStart = new Date(matchDate.getTime() - 90 * 60 * 1000);
-    const windowEnd   = new Date(matchDate.getTime() + 90 * 60 * 1000);
+    const windowStart = new Date(matchDate.getTime() - 13 * 60 * 60 * 1000);
+    const windowEnd   = new Date(matchDate.getTime() + 13 * 60 * 60 * 1000);
 
     const dbMatch = await Match.findOne({
-      homeTeam: homeTeam._id,
-      awayTeam: awayTeam._id,
+      $or: [
+        { homeTeam: homeTeam._id, awayTeam: awayTeam._id },
+        { homeTeam: awayTeam._id, awayTeam: homeTeam._id }, // handle swapped teams
+      ],
       matchDate: { $gte: windowStart, $lte: windowEnd },
     });
 

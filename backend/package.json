@@ -10,7 +10,8 @@
     "seed:worldcup": "node src/seeds/worldcup.js",
     "seed:cleanup": "node src/seeds/cleanup.js",
     "seed:sportsdb": "node src/seeds/importSportsDB.js",
-    "seed:footballdata": "node src/seeds/importFootballData.js"
+    "seed:footballdata": "node src/seeds/importFootballData.js",
+    "seed:footballdata:knockout": "node src/seeds/importFootballDataKnockout.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1054.0",

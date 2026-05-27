@@ -117,8 +117,9 @@ router.get('/group/:groupId/match/:matchId', protect, async (req, res) => {
 // POST /api/predictions/tournament — create or update tournament prediction
 router.post('/tournament', protect, async (req, res) => {
   try {
-    // Check if locked
-    const isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) || !!(await Match.exists({ status: 'finished' }));
+    const firstMatch = await Match.findOne().sort({ matchDate: 1 }).select('matchDate');
+    const manualLock = !!(await Settings.get('tournamentPredictionsLocked', false));
+    const isLocked = manualLock || (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
     if (isLocked) {
       return res.status(400).json({ message: 'Tournament predictions are locked' });
     }
@@ -163,8 +164,9 @@ router.get('/tournament/:groupId', protect, async (req, res) => {
       .populate('mostYellowCards', 'name team')
       .populate('mostRedCards', 'name team');
 
-    const isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) || !!(await Match.exists({ status: 'finished' }));
-    res.json({ prediction: prediction || null, isLocked });
+    const firstMatch = await Match.findOne().sort({ matchDate: 1 }).select('matchDate');
+    const isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) || (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
+    res.json({ prediction: prediction || null, isLocked, lockAt: firstMatch?.matchDate || null });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ message: err.message });
     res.status(500).json({ message: 'Server error' });
@@ -182,8 +184,8 @@ router.get('/tournament', protect, async (req, res) => {
       .populate('mostYellowCards', 'name team')
       .populate('mostRedCards', 'name team');
 
-    const isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) || !!(await Match.exists({ status: 'finished' }));
     const firstMatch = await Match.findOne().sort({ matchDate: 1 }).select('matchDate');
+    const isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) || (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
     res.json({ prediction: prediction || null, isLocked, lockAt: firstMatch?.matchDate || null });
   } catch {
     res.status(500).json({ message: 'Server error' });
