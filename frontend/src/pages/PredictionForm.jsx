@@ -166,7 +166,7 @@ export default function PredictionForm() {
         {/* Back button */}
         <button
           onClick={handleBack}
-          className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          className="absolute top-4 left-4 z-20 w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
         >
           <ArrowLeft size={18} />
         </button>
