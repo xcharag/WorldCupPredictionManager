@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Trophy, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function Register() {
   const { register } = useAuth()
@@ -43,12 +43,23 @@ export default function Register() {
 
   return (
     <div className="page-no-nav min-h-screen flex flex-col">
-      <div className="bg-gradient-to-b from-brand-primary/20 to-transparent pt-10 pb-6 px-6 text-center">
-        <div className="w-14 h-14 bg-brand-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-          <Trophy size={28} className="text-brand-primary" />
+      {/* Hero Banner */}
+      <div className="relative h-44 overflow-hidden flex-shrink-0">
+        <img
+          src="/banner-worldcup.jpg"
+          alt="FIFA World Cup 2026"
+          className="w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-brand-bg" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+          <img
+            src="/logo-worldcup-medium.png"
+            alt="FIFA World Cup Trophy"
+            className="w-14 h-14 object-contain drop-shadow-2xl"
+          />
+          <h1 className="text-2xl font-extrabold text-white drop-shadow-lg">Crear cuenta</h1>
+          <p className="text-white/70 text-sm">Unete a las predicciones del Mundial 2026</p>
         </div>
-        <h1 className="text-2xl font-extrabold">Crear cuenta</h1>
-        <p className="text-brand-muted text-sm mt-1">Unete a las predicciones del Mundial 2026</p>
       </div>
 
       <div className="flex-1 px-5 pb-8 max-w-md mx-auto w-full">

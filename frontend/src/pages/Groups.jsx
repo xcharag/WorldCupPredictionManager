@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { Plus, Users, ChevronRight, Link as LinkIcon, UserPlus } from 'lucide-react'
+import { Plus, Users, ChevronRight, Link as LinkIcon, UserPlus, Share2 } from 'lucide-react'
 import { useToast, ToastContainer } from '../components/Toast'
 
 export default function Groups() {
@@ -40,10 +40,41 @@ export default function Groups() {
   const copyInviteLink = async (groupId) => {
     try {
       const { data } = await api.get(`/groups/${groupId}/invite-link`)
-      await navigator.clipboard.writeText(data.link)
-      addToast('Enlace de invitacion copiado', 'success')
+      const link = data.link
+      // navigator.clipboard requires user-gesture context which iOS breaks after await;
+      // fall back to the textarea trick which works reliably on all browsers.
+      let copied = false
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try { await navigator.clipboard.writeText(link); copied = true } catch { /* fall through */ }
+      }
+      if (!copied) {
+        const ta = document.createElement('textarea')
+        ta.value = link
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;'
+        document.body.appendChild(ta)
+        ta.focus()
+        ta.select()
+        copied = document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      addToast(copied ? 'Enlace copiado' : 'No se pudo copiar el enlace', copied ? 'success' : 'error')
     } catch {
       addToast('No se pudo copiar el enlace', 'error')
+    }
+  }
+
+  const shareInviteLink = async (groupId, groupName) => {
+    try {
+      const { data } = await api.get(`/groups/${groupId}/invite-link`)
+      if (navigator.share) {
+        await navigator.share({ title: `Únete a ${groupName}`, url: data.link })
+      } else {
+        // Desktop fallback: just copy
+        await navigator.clipboard.writeText(data.link)
+        addToast('Enlace copiado', 'success')
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') addToast('No se pudo compartir el enlace', 'error')
     }
   }
 
@@ -127,10 +158,16 @@ export default function Groups() {
                   <LinkIcon size={13} /> Copiar enlace
                 </button>
                 <button
+                  onClick={() => shareInviteLink(group._id, group.name)}
+                  className="flex items-center gap-1.5 text-xs text-brand-muted active:text-brand-text px-3 py-1.5 bg-brand-elevated rounded-lg"
+                >
+                  <Share2 size={13} /> Compartir
+                </button>
+                <button
                   onClick={() => setShowInvite(showInvite === group._id ? null : group._id)}
                   className="flex items-center gap-1.5 text-xs text-brand-muted active:text-brand-text px-3 py-1.5 bg-brand-elevated rounded-lg"
                 >
-                  <UserPlus size={13} /> Invitar usuario
+                  <UserPlus size={13} /> Invitar
                 </button>
               </div>
 

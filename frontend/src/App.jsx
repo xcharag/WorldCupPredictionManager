@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import BottomNav from './components/BottomNav'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -31,9 +32,10 @@ import AdminSettings from './pages/admin/AdminSettings'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <div className="min-h-screen bg-brand-bg">
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <div className="min-h-screen bg-brand-bg">
           <Routes>
             {/* Public */}
             <Route path="/login" element={<Login />} />
@@ -75,5 +77,6 @@ export default function App() {
         </div>
       </AuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }

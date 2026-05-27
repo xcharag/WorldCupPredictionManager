@@ -21,7 +21,7 @@ export default function BottomNav() {
   if (hide) return null
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-brand-surface border-t border-brand-border"
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-brand-surface/95 backdrop-blur-sm border-t-2 border-brand-navy"
          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-stretch max-w-md mx-auto">
         {NAV.map(({ to, icon: Icon, label, exact }) => (

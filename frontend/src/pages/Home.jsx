@@ -1,109 +1,135 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Users, Swords, Star, SquarePen, X } from 'lucide-react'
+import { Trophy, Users, Swords, Star, SquarePen, X, Moon, Sun } from 'lucide-react'
 import api from '../services/api'
 
 export default function Home() {
   const { user, logout, setUser } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [editOpen, setEditOpen] = useState(false)
 
   return (
-    <div className="page max-w-md mx-auto px-4 pt-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold">
-            🌍 Mundial <span className="text-brand-primary">2026</span>
-          </h1>
-          <p className="text-brand-muted text-sm">Hola, <span className="text-brand-text font-medium">@{user?.nickname}</span></p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setEditOpen(true)}
-            className="flex items-center gap-1 text-brand-muted text-sm active:text-brand-text"
-          >
-            <SquarePen size={15} /> Editar perfil
-          </button>
-          <button onClick={logout} className="text-brand-muted text-sm active:text-brand-text">
-            Salir
-          </button>
+    <div className="min-h-screen bg-brand-bg" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+
+      {/* Hero Banner */}
+      <div className="relative h-44 overflow-hidden">
+        <img
+          src="/banner-worldcup.jpg"
+          alt="FIFA World Cup 2026"
+          className="w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-brand-bg" />
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-3 flex items-end justify-between">
+          <div>
+            <p className="text-white/60 text-[10px] uppercase tracking-widest font-bold">Bienvenido</p>
+            <p className="text-white font-extrabold text-xl leading-tight">@{user?.nickname}</p>
+          </div>
+          <div className="flex items-center gap-3 pb-0.5">
+            <button
+              onClick={toggleTheme}
+              className="text-white/60 active:text-white"
+              aria-label="Cambiar tema"
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            <span className="text-white/30">·</span>
+            <button
+              onClick={() => setEditOpen(true)}
+              className="text-white/60 text-xs active:text-white flex items-center gap-1"
+            >
+              <SquarePen size={12} /> Perfil
+            </button>
+            <span className="text-white/30">·</span>
+            <button onClick={logout} className="text-white/60 text-xs active:text-white">
+              Salir
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <QuickCard
-          icon={<Users size={28} className="text-brand-primary" />}
-          title="Mis Grupos"
-          desc="Ver y crear grupos de predicción"
-          onClick={() => navigate('/groups')}
-          color="green"
-        />
-        <QuickCard
-          icon={<Swords size={28} className="text-brand-accent" />}
-          title="Partidos"
-          desc="Predecir próximos partidos"
-          onClick={() => navigate('/matches')}
-          color="amber"
-        />
-        <QuickCard
-          icon={<Trophy size={28} className="text-purple-400" />}
-          title="Tabla de posiciones"
-          desc="Mira cómo te posicionas"
-          onClick={() => navigate('/leaderboard')}
-          color="purple"
-        />
-        <QuickCard
-          icon={<Star size={28} className="text-blue-400" />}
-          title="Torneo"
-          desc="Predicciones del torneo"
-          onClick={() => navigate('/tournament')}
-          color="blue"
-        />
-      </div>
-
-      {/* Email verification banner */}
-      {user && !user.isEmailVerified && (
-        <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-4 mb-4">
-          <p className="text-sm text-amber-300">
-            📧 Por favor, verifica tu correo electrónico para desbloquear todas las funciones. Revisa tu bandeja de entrada.
-          </p>
+      <div className="max-w-md mx-auto px-4">
+        {/* Logo + branding */}
+        <div className="flex items-center gap-3 pt-4 pb-3">
+          <img src="/logo-worldcup-medium.png" alt="World Cup Trophy" className="w-12 h-12 object-contain drop-shadow" />
+          <div>
+            <h1 className="font-extrabold text-white tracking-tight leading-tight text-base uppercase">FIFA World Cup 2026</h1>
+            <p className="text-brand-accent text-[11px] font-bold uppercase tracking-widest">Demostra tu futbol</p>
+          </div>
         </div>
-      )}
 
-      {/* Scoring guide */}
-      <div className="card">
-        <h2 className="font-bold mb-3 flex items-center gap-2">
-          <Trophy size={18} className="text-brand-accent" /> Guía de puntuación
-        </h2>
-        <div className="space-y-2 text-sm">
-          {[
-            ['Resultado correcto (gana o empate)', '+2 pts'],
-            ['Marcador exacto', '+1 bono'],
-            ['Un marcador correcto', '+1 bono'],
-            ['Ambos marcadores correctos', '+2 bono'],
-            ['Pronostico perfecto', '= 5 pts'],
-          ].map(([label, pts]) => (
-            <div key={label} className="flex justify-between text-brand-muted">
-              <span>{label}</span>
-              <span className="font-semibold text-brand-text">{pts}</span>
-            </div>
-          ))}
-          <div className="border-t border-brand-border pt-2 mt-2">
-              <p className="text-xs text-brand-muted font-semibold mb-1">Pronosticos del torneo:</p>
+        {/* Email verification banner */}
+        {user && !user.isEmailVerified && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 dark:bg-amber-900/30 dark:border-amber-700/50">
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              📧 Por favor, verifica tu correo electrónico para desbloquear todas las funciones. Revisa tu bandeja de entrada y/o Spam.
+            </p>
+          </div>
+        )}
+
+        {/* Quick actions */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <QuickCard
+            icon={<Users size={28} />}
+            title="Mis Grupos"
+            desc="Ver y crear grupos"
+            onClick={() => navigate('/groups')}
+            from="#0E593E" to="#041F15" iconColor="#4ade80"
+          />
+          <QuickCard
+            icon={<Swords size={28} />}
+            title="Partidos"
+            desc="Predecir partidos"
+            onClick={() => navigate('/matches')}
+            from="#7A1515" to="#300505" iconColor="#f87171"
+          />
+          <QuickCard
+            icon={<Trophy size={28} />}
+            title="Ranking"
+            desc="Tabla de posiciones"
+            onClick={() => navigate('/leaderboard')}
+            from="#5A4200" to="#231900" iconColor="#fbbf24"
+          />
+          <QuickCard
+            icon={<Star size={28} />}
+            title="Torneo"
+            desc="Predicciones globales"
+            onClick={() => navigate('/tournament')}
+            from="#081C59" to="#030A21" iconColor="#93c5fd"
+          />
+        </div>
+
+        {/* Scoring guide */}
+        <div className="card mb-6">
+          <p className="font-bold text-brand-text mb-3 text-sm">Sistema de puntuación</p>
+          <div className="space-y-1 text-sm">
             {[
-              ['Campeon', '+50 pts'],
-              ['Subcampeon', '+30 pts'],
-              ['Maximo goleador / asistidor', '+30 / +20 pts'],
-              ['Mas tarjetas amarillas/rojas', '+20 pts'],
+              ['Ganador o Empate', '+2 pts'],
+              ['Un marcador correcto', '+1 bono'],
+              ['Resultado Correcto', '+2 bono'],
+              ['Pronostico perfecto', '= 5 pts'],
             ].map(([label, pts]) => (
               <div key={label} className="flex justify-between text-brand-muted">
                 <span>{label}</span>
                 <span className="font-semibold text-brand-text">{pts}</span>
               </div>
             ))}
+            <div className="border-t border-brand-border pt-2 mt-2">
+              <p className="text-xs text-brand-muted font-semibold mb-1">Pronosticos del torneo:</p>
+              {[
+                ['Campeon', '+50 pts'],
+                ['Subcampeon', '+30 pts'],
+                ['Maximo goleador / asistidor', '+30 / +20 pts'],
+                ['Mas tarjetas amarillas/rojas', '+20 pts'],
+              ].map(([label, pts]) => (
+                <div key={label} className="flex justify-between text-brand-muted">
+                  <span>{label}</span>
+                  <span className="font-semibold text-brand-text">{pts}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -212,16 +238,19 @@ function ProfileModal({ user, setUser, onClose }) {
   )
 }
 
-function QuickCard({ icon, title, desc, onClick, color }) {
-  const borders = { green: 'border-brand-primary/30', amber: 'border-amber-500/30', purple: 'border-purple-500/30', blue: 'border-blue-500/30' }
+function QuickCard({ icon, title, desc, onClick, from, to, iconColor }) {
   return (
     <button
       onClick={onClick}
-      className={`card text-left active:bg-brand-elevated border ${borders[color] || 'border-brand-border'} transition-colors`}
+      className="relative overflow-hidden rounded-2xl p-4 text-left active:scale-[0.97] transition-transform duration-100 min-h-[110px] flex flex-col justify-between"
+      style={{ background: `linear-gradient(145deg, ${from}, ${to})` }}
     >
-      <div className="mb-2">{icon}</div>
-      <p className="font-semibold text-sm">{title}</p>
-      <p className="text-xs text-brand-muted mt-0.5">{desc}</p>
+      <div style={{ color: iconColor }}>{icon}</div>
+      <div>
+        <p className="font-extrabold text-sm text-white leading-tight">{title}</p>
+        <p className="text-[11px] mt-0.5 text-white/60">{desc}</p>
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-2xl" />
     </button>
   )
 }

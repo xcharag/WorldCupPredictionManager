@@ -1,12 +1,41 @@
+/* ── Theme CSS variables (outside @layer for reliable cascade) ── */
+:root {
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Light mode (default) */
+  --brand-bg:           242 246 255;  /* #F2F6FF */
+  --brand-surface:      255 255 255;  /* #FFFFFF */
+  --brand-elevated:     228 235 250;  /* #E4EBFA */
+  --brand-border:       197 210 235;  /* #C5D2EB */
+  --brand-navy:         8   28  89;   /* #081C59 */
+  --brand-primary:      14  89  62;   /* #0E593E */
+  --brand-primary-dark: 10  63  44;   /* #0A3F2C */
+  --brand-accent:       191 11  11;   /* #BF0B0B */
+  --brand-danger:       191 11  11;   /* #BF0B0B */
+  --brand-text:         13  13  13;   /* #0D0D0D */
+  --brand-muted:        80  96  140;  /* #50608C */
+}
+
+/* Dark mode overrides — html.dark beats :root specificity (0,1,1) > (0,1,0) */
+html.dark {
+  --brand-bg:           6   8   15;   /* #06080F */
+  --brand-surface:      12  21  37;   /* #0C1525 */
+  --brand-elevated:     18  32  64;   /* #122040 */
+  --brand-border:       26  46  85;   /* #1A2E55 */
+  --brand-navy:         8   28  89;   /* #081C59 */
+  --brand-primary:      25  193 114;  /* #19C172 */
+  --brand-primary-dark: 14  89  62;   /* #0E593E */
+  --brand-accent:       227 21  21;   /* #E31515 */
+  --brand-danger:       227 21  21;   /* #E31515 */
+  --brand-text:         255 255 255;  /* #FFFFFF */
+  --brand-muted:        122 144 184;  /* #7A90B8 */
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
   * {
     -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
@@ -17,6 +46,7 @@
     font-family: 'Inter', system-ui, sans-serif;
     overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Prevent iOS zoom on input focus */
@@ -36,7 +66,7 @@
   }
 
   .card {
-    @apply bg-brand-surface rounded-2xl p-4;
+    @apply bg-brand-surface rounded-2xl p-4 border border-brand-border;
   }
 
   .btn-primary {
@@ -76,15 +106,15 @@
   }
 
   .badge-green {
-    @apply badge bg-green-900/50 text-green-400;
+    @apply badge bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400;
   }
 
   .badge-amber {
-    @apply badge bg-amber-900/50 text-amber-400;
+    @apply badge bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400;
   }
 
   .badge-red {
-    @apply badge bg-red-900/50 text-red-400;
+    @apply badge bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400;
   }
 
   .badge-gray {
@@ -99,11 +129,12 @@
 
   .nav-item {
     @apply flex flex-col items-center justify-center gap-0.5 flex-1 py-2
-           text-brand-muted transition-colors active:text-brand-primary;
+           text-brand-muted transition-colors active:text-brand-primary
+           border-t-2 border-transparent;
   }
 
   .nav-item.active {
-    @apply text-brand-primary;
+    @apply text-brand-primary border-brand-primary;
   }
 
   .table-row {

@@ -6,7 +6,7 @@ export default function PageHeader({ title, subtitle, onBack, action }) {
   const handleBack = onBack || (() => navigate(-1))
 
   return (
-    <div className="sticky top-0 z-30 bg-brand-bg/95 backdrop-blur-sm border-b border-brand-border px-4 py-3">
+    <div className="sticky top-0 z-30 bg-brand-bg/95 backdrop-blur-sm border-b-2 border-brand-navy px-4 py-3">
       <div className="flex items-center gap-3 max-w-md mx-auto">
         <button onClick={handleBack} className="p-1 -ml-1 text-brand-muted active:text-brand-text">
           <ChevronLeft size={24} />
