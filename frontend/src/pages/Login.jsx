@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Trophy, Swords, Users, Star } from 'lucide-react'
 
 const OAUTH_ERRORS = {
   google_failed: 'No se pudo iniciar sesión con Google. Por favor intentá de nuevo.',
@@ -57,6 +57,35 @@ export default function Login() {
           />
           <h1 className="text-2xl font-extrabold text-white drop-shadow-lg">Mundial 2026</h1>
           <p className="text-white/70 text-sm">Pronosticá, competí y ganá.</p>
+        </div>
+      </div>
+
+      {/* Project description */}
+      <div className="px-5 pt-5 pb-2 max-w-md mx-auto w-full">
+        <div className="rounded-2xl border border-brand-border bg-brand-elevated px-4 py-4">
+          <p className="text-brand-text font-extrabold text-base mb-1 text-center">¿De qué se trata?</p>
+          <p className="text-brand-muted text-sm leading-relaxed text-center mb-4">
+            Un juego de pronósticos del <span className="text-brand-text font-semibold">Mundial 2026</span>. Predecí
+            resultados, elegí al campeón y al goleador, y competí con tus amigos para ver quién sabe más de fútbol.
+          </p>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex items-center gap-2 text-brand-muted">
+              <Swords size={15} className="text-red-400 flex-shrink-0" />
+              <span>Predecí cada partido</span>
+            </div>
+            <div className="flex items-center gap-2 text-brand-muted">
+              <Trophy size={15} className="text-yellow-400 flex-shrink-0" />
+              <span>Elegí al campeón</span>
+            </div>
+            <div className="flex items-center gap-2 text-brand-muted">
+              <Users size={15} className="text-green-400 flex-shrink-0" />
+              <span>Competí en grupos</span>
+            </div>
+            <div className="flex items-center gap-2 text-brand-muted">
+              <Star size={15} className="text-blue-400 flex-shrink-0" />
+              <span>Sumate al ranking</span>
+            </div>
+          </div>
         </div>
       </div>
 
