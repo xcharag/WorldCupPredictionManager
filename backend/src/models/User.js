@@ -42,6 +42,11 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for frequently queried fields to prevent timeouts
+userSchema.index({ email: 1 });
+userSchema.index({ nickname: 1 });
+userSchema.index({ googleId: 1 }, { sparse: true });
+
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 12);
