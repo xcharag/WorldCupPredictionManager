@@ -6,11 +6,12 @@ const { protect } = require('../middleware/auth');
 // GET /api/matches — list matches (public)
 router.get('/', async (req, res) => {
   try {
-    const { stage, group, status } = req.query;
+    const { stage, group, status, matchday } = req.query;
     const filter = {};
     if (stage) filter.stage = stage;
     if (group) filter.group = group.toUpperCase();
     if (status) filter.status = status;
+    if (matchday) filter.matchday = Number(matchday);
 
     const matches = await Match.find(filter)
       .populate('homeTeam', 'name shortName flag badgeUrl')

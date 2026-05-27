@@ -20,6 +20,7 @@ const matchSchema = new mongoose.Schema(
       required: true,
     },
     group: { type: String }, // e.g. "A", "B" — only for group_stage
+    matchday: { type: Number, min: 1 }, // 1, 2, or 3 for group_stage; null for knockout
     venue: { type: String, trim: true },
     homeScore: { type: Number, default: null },
     awayScore: { type: Number, default: null },

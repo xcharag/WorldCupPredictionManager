@@ -12,7 +12,8 @@
     "seed:sportsdb": "node src/seeds/importSportsDB.js",
     "seed:footballdata": "node src/seeds/importFootballData.js",
     "seed:footballdata:knockout": "node src/seeds/importFootballDataKnockout.js",
-    "seed:knockout:numbers": "node src/seeds/assignKnockoutMatchNumbers.js"
+    "seed:knockout:numbers": "node src/seeds/assignKnockoutMatchNumbers.js",
+    "seed:matchdays": "node src/seeds/assignMatchdays.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1054.0",

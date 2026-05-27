@@ -24,6 +24,7 @@ export default function Matches() {
   const [predictionsByMatch, setPredictionsByMatch] = useState({})
   const [stage, setStage] = useState('all')
   const [selectedGroups, setSelectedGroups] = useState([])
+  const [selectedMatchday, setSelectedMatchday] = useState(null)
   const [filterDate, setFilterDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('partidos')
@@ -48,6 +49,14 @@ export default function Matches() {
 
   const showGroupFilters = stage === 'all' || stage === 'group_stage'
 
+  const availableMatchdays = useMemo(() => {
+    if (!showGroupFilters) return []
+    const days = [...new Set(
+      matches.filter(m => m.stage === 'group_stage' && m.matchday).map(m => m.matchday)
+    )].sort((a, b) => a - b)
+    return days
+  }, [matches, showGroupFilters])
+
   const availableGroups = useMemo(() => (
     [...new Set(matches.filter(m => m.stage === 'group_stage' && m.group).map(m => m.group))].sort()
   ), [matches])
@@ -55,13 +64,14 @@ export default function Matches() {
   const filtered = useMemo(() => matches.filter(m => {
     if (stage !== 'all' && m.stage !== stage) return false
     if (showGroupFilters && selectedGroups.length > 0 && !selectedGroups.includes(m.group)) return false
+    if (showGroupFilters && selectedMatchday !== null && m.matchday !== selectedMatchday) return false
     if (filterDate) {
       const matchDay = new Date(m.matchDate).toISOString().slice(0, 10)
       if (matchDay !== filterDate) return false
     }
     if (filterUnpredicted && predictionsByMatch[m._id]) return false
     return true
-  }), [matches, stage, selectedGroups, filterDate, filterUnpredicted, predictionsByMatch, showGroupFilters])
+  }), [matches, stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, predictionsByMatch, showGroupFilters])
 
   function canEditPrediction(match) {
     if (match.status !== 'scheduled') return false
@@ -99,7 +109,7 @@ export default function Matches() {
         {STAGES.map(s => (
           <button
             key={s.key}
-            onClick={() => { setStage(s.key); setSelectedGroups([]) }}
+            onClick={() => { setStage(s.key); setSelectedGroups([]); setSelectedMatchday(null) }}
             className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors
               ${stage === s.key ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted'}`}
           >
@@ -107,6 +117,29 @@ export default function Matches() {
           </button>
         ))}
       </div>
+
+      {/* Jornada filter — group stage only */}
+      {showGroupFilters && availableMatchdays.length > 0 && (
+        <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+          <button
+            onClick={() => setSelectedMatchday(null)}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors
+              ${selectedMatchday === null ? 'bg-brand-accent text-white' : 'bg-brand-elevated text-brand-muted'}`}
+          >
+            Todas
+          </button>
+          {availableMatchdays.map(day => (
+            <button
+              key={day}
+              onClick={() => setSelectedMatchday(selectedMatchday === day ? null : day)}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors
+                ${selectedMatchday === day ? 'bg-brand-accent text-white' : 'bg-brand-elevated text-brand-muted'}`}
+            >
+              Jornada {day}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Secondary filters */}
       <div className="flex flex-col gap-2 mb-3">
