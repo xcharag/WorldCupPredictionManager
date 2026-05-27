@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Check, LogOut, X } from 'lucide-react'
+import { Bell, Camera, Check, LogOut, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
@@ -27,8 +27,20 @@ export default function Profile() {
   const [editError, setEditError] = useState('')
   const [editOpen, setEditOpen] = useState(false)
 
+  const NOTIF_OPTIONS = [
+    { key: '24h', label: '24 horas antes' },
+    { key: '6h',  label: '6 horas antes' },
+    { key: '4h',  label: '4 horas antes' },
+    { key: '1h',  label: '1 hora antes' },
+  ]
+  const [notifPrefs, setNotifPrefs] = useState([])
+  const [notifSaving, setNotifSaving] = useState(false)
+  const [notifDirty, setNotifDirty] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+
   useEffect(() => {
     api.get('/teams').then((res) => setTeams(res.data || []))
+    api.get('/profile/notifications').then((res) => setNotifPrefs(res.data.notificationPreferences || []))
   }, [])
 
   const showToast = (message, type = 'success') => addToast(message, type)
@@ -71,6 +83,29 @@ export default function Profile() {
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
+  }
+
+  const toggleNotif = (key) => {
+    setNotifPrefs(prev => {
+      if (prev.includes(key)) return prev.filter(k => k !== key)
+      if (prev.length >= 2) { addToast('Máximo 2 recordatorios permitidos', 'error'); return prev }
+      return [...prev, key]
+    })
+    setNotifDirty(true)
+  }
+
+  const handleSaveNotif = async () => {
+    setNotifSaving(true)
+    try {
+      const { data } = await api.put('/profile/notifications', { notificationPreferences: notifPrefs })
+      setNotifPrefs(data.notificationPreferences)
+      setNotifDirty(false)
+      addToast('Preferencias guardadas', 'success')
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Error al guardar', 'error')
+    } finally {
+      setNotifSaving(false)
+    }
   }
 
   const handleSaveProfile = async (e) => {
@@ -272,6 +307,63 @@ export default function Profile() {
                 Guardar cambios
               </button>
             </form>
+          )}
+        </div>
+
+        {/* ── Notificaciones ─────────────────────────── */}
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell size={15} className="text-brand-primary" />
+              <p className="font-semibold text-sm">Recordatorios por email</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setNotifOpen(o => !o); setNotifDirty(false) }}
+              className="text-xs font-semibold text-brand-primary"
+            >
+              {notifOpen ? 'Cancelar' : 'Editar'}
+            </button>
+          </div>
+          {notifOpen && (
+            <div className="flex flex-col gap-3 mt-4">
+              <p className="text-xs text-brand-muted">Recibí un email antes de cada partido (máx. 2 opciones).</p>
+              <div className="flex flex-col gap-2">
+                {NOTIF_OPTIONS.map(({ key, label }) => {
+                  const active = notifPrefs.includes(key)
+                  const disabled = !active && notifPrefs.length >= 2
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => toggleNotif(key)}
+                      disabled={disabled}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-colors
+                        ${active
+                          ? 'border-brand-primary bg-brand-primary/10 text-brand-text'
+                          : disabled
+                            ? 'border-brand-border bg-transparent text-brand-muted opacity-40'
+                            : 'border-brand-border bg-transparent text-brand-muted active:bg-brand-elevated'}`}
+                    >
+                      <span className="text-sm">{label}</span>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0
+                        ${active ? 'border-brand-primary bg-brand-primary' : 'border-brand-border'}`}>
+                        {active && <Check size={11} className="text-white" strokeWidth={3} />}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                onClick={handleSaveNotif}
+                disabled={notifSaving || !notifDirty}
+                className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {notifSaving
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <Check size={16} />}
+                Guardar recordatorios
+              </button>
+            </div>
           )}
         </div>
 

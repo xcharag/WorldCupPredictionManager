@@ -98,9 +98,45 @@ router.put('/favorite-team', protect, async (req, res) => {
 router.get('/me', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .select('name nickname email avatar favoriteTeam isEmailVerified isAdmin createdAt')
+      .select('name nickname email avatar favoriteTeam isEmailVerified isAdmin createdAt notificationPreferences')
       .populate('favoriteTeam', 'name shortName fifaCode badgeUrl flag');
     res.json({ user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /api/profile/notifications
+router.get('/notifications', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('notificationPreferences');
+    res.json({ notificationPreferences: user.notificationPreferences || [] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PUT /api/profile/notifications
+router.put('/notifications', protect, async (req, res) => {
+  const { notificationPreferences } = req.body;
+  const VALID = ['24h', '6h', '4h', '1h'];
+
+  if (!Array.isArray(notificationPreferences))
+    return res.status(400).json({ message: 'notificationPreferences debe ser un array' });
+  if (notificationPreferences.length > 2)
+    return res.status(400).json({ message: 'Máximo 2 preferencias permitidas' });
+  if (notificationPreferences.some((v) => !VALID.includes(v)))
+    return res.status(400).json({ message: 'Valor de preferencia inválido' });
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { notificationPreferences: [...new Set(notificationPreferences)] },
+      { new: true }
+    ).select('notificationPreferences');
+    res.json({ notificationPreferences: user.notificationPreferences });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });

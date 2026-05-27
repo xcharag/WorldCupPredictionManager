@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema(
     passwordResetToken: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },
     isAdmin: { type: Boolean, default: false },
+    notificationPreferences: {
+      type: [{ type: String, enum: ['24h', '6h', '4h', '1h'] }],
+      default: [],
+      validate: {
+        validator: (v) => v.length <= 2,
+        message: 'Máximo 2 preferencias de notificación permitidas',
+      },
+    },
   },
   { timestamps: true }
 );

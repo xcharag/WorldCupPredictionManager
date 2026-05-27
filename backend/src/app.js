@@ -19,18 +19,20 @@ const teamRoutes = require('./routes/teams');
 const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
 const imageRoutes = require('./routes/images');
+const { startScheduler } = require('./services/scheduler');
 
 const app = express();
 
 // Trust the first proxy (nginx/Traefik in production)
 app.set('trust proxy', 1);
 
-// Connect to MongoDB
-connectDB().catch((err) => {
-  console.error('MongoDB connection failed:', err.message);
-  process.exit(1);
-});
-
+// Connect to MongoDB, then start reminder scheduler
+connectDB()
+  .then(() => startScheduler())
+  .catch((err) => {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  });
 // Security middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(mongoSanitize());
