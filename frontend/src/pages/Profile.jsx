@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Check, ChevronRight, LogOut, X } from 'lucide-react'
+import { Camera, Check, LogOut, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
@@ -19,6 +19,13 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const { toasts, addToast, removeToast } = useToast()
   const [selectedTeamId, setSelectedTeamId] = useState(user?.favoriteTeam?._id || '')
+  const [name, setName] = useState(user?.name || '')
+  const [nickname, setNickname] = useState(user?.nickname || '')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState('')
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     api.get('/teams').then((res) => setTeams(res.data || []))
@@ -64,6 +71,32 @@ export default function Profile() {
   const handleLogout = async () => {
     await logout()
     navigate('/login', { replace: true })
+  }
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault()
+    setEditError('')
+    const payload = {}
+    if (name !== user.name) payload.name = name
+    if (nickname !== user.nickname) payload.nickname = nickname
+    if (newPassword) {
+      payload.currentPassword = currentPassword
+      payload.newPassword = newPassword
+    }
+    if (!Object.keys(payload).length) return
+    setEditSaving(true)
+    try {
+      const { data } = await api.patch('/auth/profile', payload)
+      setUser(data.user)
+      setCurrentPassword('')
+      setNewPassword('')
+      setEditOpen(false)
+      addToast('Perfil actualizado', 'success')
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Error al guardar')
+    } finally {
+      setEditSaving(false)
+    }
   }
 
   if (!user) return <ProfileSkeleton />
@@ -182,15 +215,68 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* ── Account ────────────────────────────────── */}
-        <div className="card divide-y divide-brand-border">
-          <button
-            onClick={() => navigate('/settings')}
-            className="w-full flex items-center justify-between py-3 text-sm text-brand-text hover:text-brand-primary transition-colors"
-          >
-            <span>Configuración de cuenta</span>
-            <ChevronRight size={16} className="text-brand-muted" />
-          </button>
+        {/* ── Editar datos ───────────────────────────── */}
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <p className="font-semibold text-sm">Datos de cuenta</p>
+            <button
+              type="button"
+              onClick={() => { setEditOpen(o => !o); setEditError('') }}
+              className="text-xs font-semibold text-brand-primary"
+            >
+              {editOpen ? 'Cancelar' : 'Editar'}
+            </button>
+          </div>
+          {editOpen && (
+            <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 mt-4">
+              <div>
+                <label className="text-xs text-brand-muted mb-1 block">Nombre</label>
+                <input value={name} onChange={e => setName(e.target.value)} className="input w-full" required />
+              </div>
+              <div>
+                <label className="text-xs text-brand-muted mb-1 block">Nickname</label>
+                <input
+                  value={nickname}
+                  onChange={e => setNickname(e.target.value)}
+                  className="input w-full"
+                  required minLength={3} maxLength={20}
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Solo letras, números y guiones bajos"
+                />
+              </div>
+              {!user.googleId && (
+                <>
+                  <hr className="border-brand-border" />
+                  <p className="text-xs text-brand-muted">Cambiar contraseña (dejar vacío para no cambiar)</p>
+                  <div>
+                    <label className="text-xs text-brand-muted mb-1 block">Contraseña actual</label>
+                    <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                      className="input w-full" autoComplete="current-password" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-brand-muted mb-1 block">Nueva contraseña</label>
+                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                      className="input w-full" minLength={6} autoComplete="new-password" />
+                  </div>
+                </>
+              )}
+              {editError && <p className="text-red-400 text-sm">{editError}</p>}
+              <button
+                type="submit"
+                disabled={editSaving || (name === user.name && nickname === user.nickname && !newPassword)}
+                className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {editSaving
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <Check size={16} />}
+                Guardar cambios
+              </button>
+            </form>
+          )}
+        </div>
+
+        {/* ── Cerrar sesión ──────────────────────────── */}
+        <div className="card">
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-between py-3 text-sm text-brand-accent hover:opacity-80 transition-opacity"

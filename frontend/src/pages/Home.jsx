@@ -1,15 +1,12 @@
-import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Users, Swords, Star, SquarePen, X, Moon, Sun } from 'lucide-react'
-import api from '../services/api'
+import { Trophy, Users, Swords, Star, Moon, Sun } from 'lucide-react'
 
 export default function Home() {
   const { user, logout, setUser } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
-  const [editOpen, setEditOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-brand-bg" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
@@ -34,13 +31,6 @@ export default function Home() {
               aria-label="Cambiar tema"
             >
               {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-            <span className="text-white/30">·</span>
-            <button
-              onClick={() => setEditOpen(true)}
-              className="text-white/60 text-xs active:text-white flex items-center gap-1"
-            >
-              <SquarePen size={12} /> Perfil
             </button>
             <span className="text-white/30">·</span>
             <button onClick={logout} className="text-white/60 text-xs active:text-white">
@@ -132,107 +122,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </div>
-
-      {editOpen && <ProfileModal user={user} setUser={setUser} onClose={() => setEditOpen(false)} />}
-    </div>
-  )
-}
-
-function ProfileModal({ user, setUser, onClose }) {
-  const isGoogle = !!user?.googleId
-  const [name, setName] = useState(user?.name || '')
-  const [nickname, setNickname] = useState(user?.nickname || '')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const submit = async (e) => {
-    e.preventDefault()
-    setError('')
-    const payload = {}
-    if (name !== user.name) payload.name = name
-    if (nickname !== user.nickname) payload.nickname = nickname
-    if (newPassword) {
-      payload.currentPassword = currentPassword
-      payload.newPassword = newPassword
-    }
-    if (!Object.keys(payload).length) { onClose(); return }
-    setSaving(true)
-    try {
-      const { data } = await api.patch('/auth/profile', payload)
-      setUser(data.user)
-      onClose()
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <div className="card w-full max-w-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">Editar perfil</h2>
-          <button onClick={onClose} className="p-1 text-brand-muted"><X size={18} /></button>
-        </div>
-        <form onSubmit={submit} className="flex flex-col gap-3">
-          <div>
-            <label className="text-xs text-brand-muted mb-1 block">Nombre</label>
-            <input value={name} onChange={e => setName(e.target.value)} className="input w-full" required />
-          </div>
-          <div>
-            <label className="text-xs text-brand-muted mb-1 block">Nickname</label>
-            <input
-              value={nickname}
-              onChange={e => setNickname(e.target.value)}
-              className="input w-full"
-              required
-              minLength={3}
-              maxLength={20}
-              pattern="[a-zA-Z0-9_]+"
-              title="Solo letras, números y guiones bajos"
-            />
-          </div>
-
-          {!isGoogle && (
-            <>
-              <hr className="border-brand-border" />
-              <p className="text-xs text-brand-muted">Cambiar contraseña (dejar vacío para no cambiar)</p>
-              <div>
-                <label className="text-xs text-brand-muted mb-1 block">Contraseña actual</label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  className="input w-full"
-                  autoComplete="current-password"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-brand-muted mb-1 block">Nueva contraseña</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  className="input w-full"
-                  minLength={6}
-                  autoComplete="new-password"
-                />
-              </div>
-            </>
-          )}
-
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <button type="submit" disabled={saving} className="btn-primary mt-1">
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
-        </form>
       </div>
     </div>
   )
