@@ -71,7 +71,7 @@ export default function BottomNav() {
           rel="noopener noreferrer"
           className="text-[9px] text-brand-muted/50 hover:text-brand-muted transition-colors"
         >
-          Desarrollado por xchar
+          Desarrollado por xchar (Oscar Aguilar)
         </a>
       </div>
     </nav>

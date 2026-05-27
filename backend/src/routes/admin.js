@@ -378,11 +378,18 @@ router.post('/matches', [body('matchDate').notEmpty(), body('stage').notEmpty()]
 
 router.put('/matches/:id', async (req, res) => {
   try {
-    const match = await Match.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
+    const update = { ...req.body };
+    // Convert empty strings to null so Mongoose doesn't try to cast '' → ObjectId
+    if (update.homeTeam === '') update.homeTeam = null;
+    if (update.awayTeam === '') update.awayTeam = null;
+    const match = await Match.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true })
       .populate('homeTeam awayTeam', 'name shortName flag');
     if (!match) return res.status(404).json({ message: 'Match not found' });
     res.json(match);
-  } catch { res.status(500).json({ message: 'Server error' }); }
+  } catch (err) {
+    console.error('[Admin] Match update error:', err.message);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
 });
 
 router.delete('/matches/:id', async (req, res) => {
