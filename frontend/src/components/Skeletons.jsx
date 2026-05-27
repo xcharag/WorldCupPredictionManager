@@ -52,7 +52,15 @@ function FilterChipsSkeleton({ count = 6 }) {
 }
 
 // ── Matches / MatchPredictions page ──────────────────────────────
-export function MatchListSkeleton({ hasPageHeader = false }) {
+export function MatchListSkeleton({ hasPageHeader = false, embedded = false }) {
+  if (embedded) {
+    return (
+      <div className="animate-pulse">
+        <FilterChipsSkeleton />
+        {Array.from({ length: 6 }).map((_, i) => <MatchCardSkeleton key={i} />)}
+      </div>
+    )
+  }
   return (
     <div className="page max-w-md mx-auto px-4 pt-6 animate-pulse">
       {hasPageHeader
@@ -128,11 +136,11 @@ export function LeaderboardSkeleton() {
 }
 
 // ── TournamentPredictions page ───────────────────────────────────
-export function TournamentPredictionsSkeleton() {
+export function TournamentPredictionsSkeleton({ embedded = false }) {
   return (
-    <div className="page max-w-md mx-auto animate-pulse">
-      <PageHeaderSkeleton />
-      <div className="px-4 pt-4 flex flex-col gap-3">
+    <div className={`animate-pulse${embedded ? '' : ' page max-w-md mx-auto'}`}>
+      {!embedded && <PageHeaderSkeleton />}
+      <div className={embedded ? 'flex flex-col gap-3 pt-2' : 'px-4 pt-4 flex flex-col gap-3'}>
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="card flex items-center gap-3 px-4 py-4">
             <Bone className="w-9 h-9 rounded-xl flex-shrink-0" />

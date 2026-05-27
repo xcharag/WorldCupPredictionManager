@@ -1,13 +1,12 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, Users, Trophy, Shield, Swords, Star } from 'lucide-react'
+import { Home, Users, Trophy, Shield, Swords } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import MinioImage from './MinioImage'
 
 const NAV = [
   { to: '/groups', icon: Users, label: 'Grupos' },
-  { to: '/matches', icon: Swords, label: 'Partidos' },
+  { to: '/matches', icon: Swords, label: 'Predicciones' },
   { to: '/', icon: Home, label: 'Inicio', exact: true },
-  { to: '/tournament', icon: Star, label: 'Torneo' },
   { to: '/leaderboard', icon: Trophy, label: 'Ranking' },
 ]
 
