@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { GroupListSkeleton } from '../components/Skeletons'
 import { Plus, Users, ChevronRight, Link as LinkIcon, UserPlus, Share2 } from 'lucide-react'
 import { useToast, ToastContainer } from '../components/Toast'
 
@@ -93,7 +93,7 @@ export default function Groups() {
     }
   }
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <GroupListSkeleton />
 
   return (
     <div className="page max-w-md mx-auto px-4 pt-6">

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import MatchCard from '../components/MatchCard'
+import { MatchListSkeleton } from '../components/Skeletons'
 import { useToast, ToastContainer } from '../components/Toast'
 
 const STAGES = [
@@ -60,7 +60,7 @@ export default function Matches() {
     return new Date(match.matchDate) > new Date()
   }
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <MatchListSkeleton />
 
   return (
     <div className="page max-w-md mx-auto px-4 pt-6">

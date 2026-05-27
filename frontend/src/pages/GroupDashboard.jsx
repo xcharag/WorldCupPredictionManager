@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { GroupDashboardSkeleton } from '../components/Skeletons'
 import { Swords, Trophy, BarChart3, Users, ChevronRight } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -20,7 +20,7 @@ export default function GroupDashboard() {
       .finally(() => setLoading(false))
   }, [groupId])
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <GroupDashboardSkeleton />
   if (!group) return null
   const isCreator = group.creator?._id === user?._id
 

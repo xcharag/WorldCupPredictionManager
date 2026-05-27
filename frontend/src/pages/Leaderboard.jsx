@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { LeaderboardSkeleton } from '../components/Skeletons'
 import { useAuth } from '../contexts/AuthContext'
 import SearchableSelect from '../components/SearchableSelect'
 import MinioImage from '../components/MinioImage'
@@ -53,7 +53,7 @@ export default function Leaderboard() {
       .finally(() => setLoading(false))
   }, [scope])
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <LeaderboardSkeleton />
 
   const myEntry = entries.find(e => e.user._id === user?._id)
 

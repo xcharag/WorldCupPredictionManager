@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import { useToast, ToastContainer } from '../components/Toast'
 import { Lock, ArrowLeft } from 'lucide-react'
 import { celebratePredictionSaved } from '../utils/confetti'
 import MinioImage from '../components/MinioImage'
+
+const STAGE_LABELS = {
+  group_stage:  'Fase de grupos',
+  round_of_32:  'Ronda de 32',
+  round_of_16:  'Octavos de final',
+  quarter_final: 'Cuartos de final',
+  semi_final:   'Semifinales',
+  third_place:  'Tercer puesto',
+  final:        'Final',
+}
 
 export default function PredictionForm() {
   const { groupId, matchId } = useParams()
@@ -64,7 +73,50 @@ export default function PredictionForm() {
     setter(String(n))
   }
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return (
+    <div className="min-h-screen bg-brand-bg pb-24 animate-pulse">
+      {/* Banner skeleton */}
+      <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-[#0a1535] to-brand-navy" />
+        {/* stage pill placeholder */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+          <div className="h-5 w-28 rounded-full bg-white/10" />
+        </div>
+        <div className="relative z-10 flex items-center justify-between px-6 pt-14 pb-4 max-w-md mx-auto">
+          <div className="flex flex-col items-center gap-2 flex-1">
+            <div className="w-20 h-20 rounded-2xl bg-white/10" />
+            <div className="h-3 w-16 rounded bg-white/10" />
+          </div>
+          <div className="px-2">
+            <div className="h-3 w-5 rounded bg-white/10" />
+          </div>
+          <div className="flex flex-col items-center gap-2 flex-1">
+            <div className="w-20 h-20 rounded-2xl bg-white/10" />
+            <div className="h-3 w-16 rounded bg-white/10" />
+          </div>
+        </div>
+        <div className="relative z-10 pb-5 text-center max-w-md mx-auto space-y-1.5">
+          <div className="h-2.5 w-40 rounded bg-white/10 mx-auto" />
+          <div className="h-2 w-28 rounded bg-white/10 mx-auto" />
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-brand-bg to-transparent" />
+      </div>
+      {/* Score-picker skeleton */}
+      <div className="px-4 pt-6 max-w-md mx-auto">
+        <div className="flex items-center justify-center gap-8 mb-8">
+          {[0, 1].map(i => (
+            <div key={i} className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-brand-elevated" />
+              <div className="w-16 h-14 rounded-xl bg-brand-elevated" />
+              <div className="w-10 h-10 rounded-xl bg-brand-elevated" />
+              <div className="h-2.5 w-12 rounded bg-brand-elevated mt-1" />
+            </div>
+          ))}
+        </div>
+        <div className="h-12 rounded-xl bg-brand-elevated" />
+      </div>
+    </div>
+  )
   if (!match) return null
 
   const isLocked =
@@ -122,7 +174,7 @@ export default function PredictionForm() {
         {match.stage && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
             <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/10 backdrop-blur-sm text-white/80">
-              {match.stage}
+              {STAGE_LABELS[match.stage] || match.stage}
             </span>
           </div>
         )}

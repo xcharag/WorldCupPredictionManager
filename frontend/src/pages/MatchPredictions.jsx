@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import MatchCard from '../components/MatchCard'
+import { MatchListSkeleton } from '../components/Skeletons'
 import PageHeader from '../components/PageHeader'
 import { useToast, ToastContainer } from '../components/Toast'
 
@@ -47,7 +47,7 @@ export default function MatchPredictions() {
     return matches.filter(m => m.stage === stage)
   }, [matches, stage])
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <MatchListSkeleton hasPageHeader />
 
   return (
     <div className="page max-w-md mx-auto">

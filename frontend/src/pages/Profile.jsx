@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
 import SearchableSelect from '../components/SearchableSelect'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { ProfileSkeleton } from '../components/Skeletons'
 import { ToastContainer, useToast } from '../components/Toast'
 import MinioImage from '../components/MinioImage'
 
@@ -66,7 +66,7 @@ export default function Profile() {
     navigate('/login', { replace: true })
   }
 
-  if (!user) return <LoadingSpinner fullScreen />
+  if (!user) return <ProfileSkeleton />
 
   const teamOptions = [
     { value: '', label: 'Sin selección' },

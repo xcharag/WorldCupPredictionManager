@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { TournamentPredictionsSkeleton } from '../components/Skeletons'
 import { useToast, ToastContainer } from '../components/Toast'
 import SearchableSelect from '../components/SearchableSelect'
 import { Lock } from 'lucide-react'
@@ -73,7 +73,7 @@ export default function TournamentPredictions() {
     }
   }
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <TournamentPredictionsSkeleton />
 
   return (
     <div className="page max-w-md mx-auto">
