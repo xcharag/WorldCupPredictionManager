@@ -86,12 +86,14 @@ export function openInDefaultBrowser() {
     setTimeout(() => {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
-          alert('URL copiada! Pégala en Safari para continuar.')
+          alert('¡Listo! La URL fue copiada.\n\nAbrí Safari y pegá la URL para iniciar sesión con Google.')
         }).catch(() => {
-          alert('Por favor copia esta URL y ábrela en Safari:\n' + url)
+          alert('Por favor copiá esta URL y abrila en Safari:\n\n' + url)
         })
+      } else {
+        alert('Por favor abrí esta página en Safari para usar Google Login:\n\n' + url)
       }
-    }, 500)
+    }, 300)
   } else {
     // Android or other - try intent
     window.location.href = `intent:${url.replace(/^https?:\/\//, '')}#Intent;end`
@@ -100,11 +102,13 @@ export function openInDefaultBrowser() {
     setTimeout(() => {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
-          alert('URL copiada! Pégala en Chrome para continuar.')
+          alert('¡Listo! La URL fue copiada.\n\nAbrí Chrome u otro navegador y pegá la URL para iniciar sesión con Google.')
         }).catch(() => {
-          alert('Por favor copia esta URL y ábrela en Chrome:\n' + url)
+          alert('Por favor copiá esta URL y abrila en Chrome:\n\n' + url)
         })
+      } else {
+        alert('Por favor abrí esta página en Chrome para usar Google Login:\n\n' + url)
       }
-    }, 500)
+    }, 300)
   }
 }

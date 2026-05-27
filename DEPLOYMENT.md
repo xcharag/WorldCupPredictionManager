@@ -1,8 +1,51 @@
 # Deployment Guide
 
+## Coolify Deployment
+
+The `docker-compose.yml` follows Coolify's standard pattern:
+
+### Network Architecture
+- **Backend**: Internal `app-net` only (not exposed)
+- **Frontend**: Both `app-net` + `coolify` network (exposed via Traefik)
+- Includes 120s timeout labels for OAuth and slow connections
+- Health checks configured with appropriate start periods
+
+### Quick Deploy to Coolify
+
+1. Create new service from Git repository
+2. Set environment variables (see below)
+3. Deploy - Coolify auto-generates routing labels
+4. Access via your domain
+
+### Required Environment Variables
+
+```env
+# URLs (match your Coolify domain)
+FRONTEND_URL=https://your-domain.com
+BACKEND_URL=https://your-domain.com
+
+# Database
+MONGODB_URI=mongodb://user:password@host:port/worldcup2026
+
+# JWT
+JWT_SECRET=your-super-long-random-secret-key
+JWT_EXPIRES_IN=7d
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Email
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASS=your-app-password
+EMAIL_FROM="Mundial 2026 <your-email@gmail.com>"
+```
+
+---
+
 ## Gateway Timeout Issues (504 errors)
 
-If you're experiencing 504 Gateway Timeout errors in production (Coolify/other hosting), this is usually caused by the reverse proxy timing out before the backend responds.
+The docker-compose.yml includes 120s timeout labels, but if you still experience timeouts:
 
 ### Solution 1: Increase Coolify/Traefik Timeouts
 

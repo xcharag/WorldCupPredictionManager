@@ -51,15 +51,9 @@ export default function Login() {
 
   const handleGoogle = () => {
     if (inEmbeddedBrowser) {
-      // Show alert with instructions
-      const proceed = window.confirm(
-        `Estás usando ${browserName}. Google no permite iniciar sesión desde navegadores integrados.\n\n` +
-        getOpenInBrowserInstructions() + '\n\n' +
-        '¿Querés intentar abrir en tu navegador predeterminado?'
-      )
-      if (proceed) {
-        openInDefaultBrowser()
-      }
+      // Automatically open in default browser
+      console.log(`[Login] Embedded browser detected (${browserName}), opening in default browser...`)
+      openInDefaultBrowser()
       return
     }
     window.location.href = '/api/auth/google'
