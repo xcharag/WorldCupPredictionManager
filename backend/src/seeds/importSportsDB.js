@@ -255,29 +255,41 @@ async function importMatches() {
 
     const stage = getStage(ev.intRound, ev.strEvent);
 
-    await Match.findOneAndUpdate(
-      { sportsdbId: ev.idEvent },
-      {
-        $set: {
-          sportsdbId: ev.idEvent,
-          homeTeam: homeTeamId,
-          awayTeam: awayTeamId,
-          matchDate: new Date(ev.strTimestamp),
-          stage,
-          venue: ev.strVenue || undefined,
-          homeScore: ev.intHomeScore !== null ? parseInt(ev.intHomeScore) : null,
-          awayScore: ev.intAwayScore !== null ? parseInt(ev.intAwayScore) : null,
-          status: ev.strStatus === 'Match Finished' ? 'finished' : 'scheduled',
-          thumbUrl,
-        },
-        $setOnInsert: {
-          matchNumber: parseInt(ev.intRound) || null,
-        },
-      },
-      { upsert: true, new: true }
-    );
+    // Try to find an existing match by the home+away team pair
+    const existing = await Match.findOne({ homeTeam: homeTeamId, awayTeam: awayTeamId });
 
-    console.log(`  ✓ ${ev.dateEvent} ${ev.strHomeTeam} vs ${ev.strAwayTeam} [${stage}]`);
+    if (existing) {
+      // Only patch sportsdbId and thumbUrl — leave everything else untouched
+      const patch = {};
+      if (!existing.sportsdbId) patch.sportsdbId = ev.idEvent;
+      if (thumbUrl && !existing.thumbUrl) patch.thumbUrl = thumbUrl;
+      if (ev.intHomeScore !== null && ev.intHomeScore !== '') patch.homeScore = parseInt(ev.intHomeScore);
+      if (ev.intAwayScore !== null && ev.intAwayScore !== '') patch.awayScore = parseInt(ev.intAwayScore);
+
+      if (Object.keys(patch).length) {
+        await Match.updateOne({ _id: existing._id }, { $set: patch });
+        console.log(`  ✓ patched  ${ev.dateEvent} ${ev.strHomeTeam} vs ${ev.strAwayTeam}`);
+      } else {
+        console.log(`  – skipped  ${ev.dateEvent} ${ev.strHomeTeam} vs ${ev.strAwayTeam} (already up to date)`);
+      }
+    } else {
+      // No existing match — insert a new one from TheSportsDB data
+      await Match.create({
+        sportsdbId: ev.idEvent,
+        homeTeam: homeTeamId,
+        awayTeam: awayTeamId,
+        matchDate: new Date(ev.strTimestamp),
+        stage,
+        venue: ev.strVenue || undefined,
+        homeScore: ev.intHomeScore !== null ? parseInt(ev.intHomeScore) : null,
+        awayScore: ev.intAwayScore !== null ? parseInt(ev.intAwayScore) : null,
+        status: ev.strStatus === 'Match Finished' ? 'finished' : 'scheduled',
+        thumbUrl,
+        matchNumber: parseInt(ev.intRound) || null,
+      });
+      console.log(`  + inserted ${ev.dateEvent} ${ev.strHomeTeam} vs ${ev.strAwayTeam} [${stage}]`);
+    }
+
     upserted++;
   }
 
