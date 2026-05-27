@@ -18,10 +18,13 @@ const protect = async (req, res, next) => {
     req.user = await User.findById(decoded.userId)
       .select('-password')
       .populate('favoriteTeam', 'name shortName fifaCode badgeUrl flag');
-    if (!req.user) return res.status(401).json({ message: 'User not found' });
+    if (!req.user) return res.status(401).json({ message: 'Token valid but user not found' });
     next();
-  } catch {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+  } catch (err) {
+    // Distinguish between expired and invalid tokens for better logging
+    const message = err.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token';
+    console.error(`[Auth Middleware] ${message}:`, err.message);
+    return res.status(401).json({ message });
   }
 };
 

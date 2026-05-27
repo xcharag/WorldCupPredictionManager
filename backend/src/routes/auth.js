@@ -165,6 +165,13 @@ router.get('/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false }, (err, user, info) => {
     if (err) {
       console.error('[Google OAuth] Callback error:', err.message || err);
+      
+      // Check if it's a disallowed_useragent error from Google
+      const errorMsg = err.message || String(err);
+      if (errorMsg.includes('disallowed_useragent') || errorMsg.includes('403')) {
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=disallowed_useragent`);
+      }
+      
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
     }
     if (!user) {

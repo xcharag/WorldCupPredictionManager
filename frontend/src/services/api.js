@@ -12,15 +12,22 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Redirect to login on 401
+// Redirect to login on 401 (only for invalid/expired tokens, not network errors)
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem('wc_token')
-      // Don't auto-redirect during OAuth callback flow - let the component handle it
-      if (!window.location.pathname.includes('/auth/callback')) {
-        window.location.href = '/login'
+      // Only clear token and redirect for actual auth failures
+      const isAuthFailure = err.response?.data?.message?.includes('token') || 
+                            err.response?.data?.message?.includes('authenticated') ||
+                            err.response?.data?.message?.includes('expired')
+      
+      if (isAuthFailure) {
+        localStorage.removeItem('wc_token')
+        // Don't auto-redirect during OAuth callback flow - let the component handle it
+        if (!window.location.pathname.includes('/auth/callback')) {
+          window.location.href = '/login'
+        }
       }
     }
     return Promise.reject(err)

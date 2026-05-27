@@ -23,6 +23,7 @@ Edit `backend/.env` with your values:
 ```
 MONGODB_URI=mongodb://localhost:27017/concursomundial
 JWT_SECRET=change_me_to_a_long_random_string
+JWT_EXPIRES_IN=7d  # Token expiration (7 days default)
 FRONTEND_URL=http://localhost:5173
 
 # Google OAuth (optional)

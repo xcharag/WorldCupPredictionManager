@@ -30,8 +30,9 @@ export default function AuthCallback() {
       })
       .catch((error) => {
         console.error('[AuthCallback] Failed to login with token:', error)
-        localStorage.removeItem('wc_token')
-        navigate('/login?error=token_invalid', { replace: true })
+        // Token was already cleared by loginWithToken if it was a 401
+        const errorParam = error.response?.status === 401 ? 'token_invalid' : 'auth_failed'
+        navigate(`/login?error=${errorParam}`, { replace: true })
       })
   }, [searchParams, loginWithToken, navigate])
 
