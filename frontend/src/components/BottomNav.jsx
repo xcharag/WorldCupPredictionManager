@@ -4,10 +4,10 @@ import { useAuth } from '../contexts/AuthContext'
 import MinioImage from './MinioImage'
 
 const NAV = [
-  { to: '/groups', icon: Users, label: 'Grupos' },
-  { to: '/matches', icon: Swords, label: 'Predicciones' },
-  { to: '/', icon: Home, label: 'Inicio', exact: true },
-  { to: '/leaderboard', icon: Trophy, label: 'Ranking' },
+  { to: '/groups',      icon: Users,  label: 'Grupos',       exact: false, navId: 'nav-grupos'      },
+  { to: '/matches',     icon: Swords, label: 'Predicciones', exact: false, navId: 'nav-partidos'    },
+  { to: '/',            icon: Home,   label: 'Inicio',       exact: true,  navId: 'nav-inicio'      },
+  { to: '/leaderboard', icon: Trophy, label: 'Ranking',      exact: false, navId: 'nav-ranking'     },
 ]
 
 export default function BottomNav() {
@@ -25,9 +25,10 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-brand-surface/95 backdrop-blur-sm border-t-2 border-brand-navy"
          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-stretch max-w-md mx-auto">
-        {NAV.map(({ to, icon: Icon, label, exact }) => (
+        {NAV.map(({ to, icon: Icon, label, exact, navId }) => (
           <NavLink
             key={to}
+            id={navId}
             to={to}
             end={exact}
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -39,6 +40,7 @@ export default function BottomNav() {
 
         {/* Profile avatar tab */}
         <NavLink
+          id="nav-perfil"
           to="/profile"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
         >

@@ -110,6 +110,56 @@ export default function Home() {
               align: 'center',
             },
           },
+          {
+            element: '#nav-partidos',
+            popover: {
+              title: '⚽ Pestaña Predicciones',
+              description:
+                'Desde acá accedés a todos los partidos del torneo para hacer y ver tus pronósticos.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-grupos',
+            popover: {
+              title: '👥 Pestaña Grupos',
+              description:
+                'Acá creás grupos privados o te unís al de tus amigos con un código de invitación.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-inicio',
+            popover: {
+              title: '🏠 Pestaña Inicio',
+              description:
+                'Tu pantalla principal: resumen de pendientes, accesos rápidos y el sistema de puntuación.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-ranking',
+            popover: {
+              title: '🏅 Pestaña Ranking',
+              description:
+                'La tabla de posiciones global. Ves tu posición y la de todos los participantes.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-perfil',
+            popover: {
+              title: '👤 Pestaña Perfil',
+              description:
+                'Tu perfil: nombre, avatar, cambio de contraseña y estadísticas personales. ¡Ya sabés todo, a jugar!',
+              side: 'top',
+              align: 'center',
+            },
+          },
         ],
         onDestroyed: () => localStorage.setItem('tour_done', '1'),
       })
