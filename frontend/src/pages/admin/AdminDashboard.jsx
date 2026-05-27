@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { BarChart3, Swords, Users, ShieldCheck, Trophy, Settings } from 'lucide-react'
+import { BarChart3, Swords, Users, ShieldCheck, Trophy, Settings, Timer } from 'lucide-react'
 
 const SECTIONS = [
   { icon: Swords, label: 'Partidos', desc: 'Gestionar calendario y resultados', to: '/admin/matches', color: 'text-brand-accent' },
@@ -8,6 +8,7 @@ const SECTIONS = [
   { icon: Trophy, label: 'Resultados del torneo', desc: 'Definir resultados finales', to: '/admin/results', color: 'text-brand-accent' },
   { icon: BarChart3, label: 'Puntuacion', desc: 'Recalcular puntos', to: '/admin/scoring', color: 'text-brand-primary' },
   { icon: Settings, label: 'Configuracion', desc: 'Bloquear pronosticos del torneo', to: '/admin/settings', color: 'text-brand-muted' },
+  { icon: Timer, label: 'Cron Jobs', desc: 'Estado y logs de tareas programadas', to: '/admin/cron', color: 'text-amber-400' },
 ]
 
 export default function AdminDashboard() {

@@ -47,6 +47,9 @@ services:
       # Redis — optional, caches presigned Minio URLs
       REDIS_URL: ${REDIS_URL:-}
 
+      # football-data.org API — optional, enables live score updates + roster sync
+      FOOTBALL_DATA_API_KEY: ${FOOTBALL_DATA_API_KEY:-}
+
       # Email (SMTP) — required for email verification
       EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
       EMAIL_PORT: ${EMAIL_PORT:-587}

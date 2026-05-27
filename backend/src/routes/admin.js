@@ -9,6 +9,7 @@ const Settings = require('../models/Settings');
 const { protect } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
 const { calculateMatchPredictions, calculateTournamentPredictions } = require('../services/scoring');
+const cl = require('../services/cronLogger');
 
 router.use(protect, requireAdmin);
 
@@ -378,11 +379,18 @@ router.post('/matches', [body('matchDate').notEmpty(), body('stage').notEmpty()]
 
 router.put('/matches/:id', async (req, res) => {
   try {
-    const match = await Match.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
+    const update = { ...req.body };
+    // Convert empty strings to null so Mongoose doesn't try to cast '' → ObjectId
+    if (update.homeTeam === '') update.homeTeam = null;
+    if (update.awayTeam === '') update.awayTeam = null;
+    const match = await Match.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true })
       .populate('homeTeam awayTeam', 'name shortName flag');
     if (!match) return res.status(404).json({ message: 'Match not found' });
     res.json(match);
-  } catch { res.status(500).json({ message: 'Server error' }); }
+  } catch (err) {
+    console.error('[Admin] Match update error:', err.message);
+    res.status(500).json({ message: err.message || 'Server error' });
+  }
 });
 
 router.delete('/matches/:id', async (req, res) => {
@@ -672,6 +680,27 @@ router.put('/tournament-results', async (req, res) => {
     await Settings.set('tournamentResults', results);
     res.json({ message: 'Tournament results saved', results });
   } catch { res.status(500).json({ message: 'Server error' }); }
+});
+
+// ─── CRON JOBS ────────────────────────────────────────────
+// GET /api/admin/cron/jobs — registered jobs with status + next run
+router.get('/cron/jobs', (_req, res) => {
+  res.json(cl.getJobs());
+});
+
+// GET /api/admin/cron/logs?job=name&limit=50&source=memory|minio
+router.get('/cron/logs', async (req, res) => {
+  const { job = null, limit = '50', source = 'memory' } = req.query;
+  const n = Math.min(parseInt(limit) || 50, 200);
+  try {
+    if (source === 'minio') {
+      const logs = await cl.loadMinioLogs(job || null, n);
+      return res.json(logs);
+    }
+    res.json(cl.getMemoryLogs(job || null, n));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 module.exports = router;

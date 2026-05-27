@@ -9,6 +9,16 @@ import { Plus, Pencil, Trash2, Check, X, Download, Upload } from 'lucide-react'
 
 const STAGES = ['group_stage','round_of_32','round_of_16','quarter_final','semi_final','third_place','final']
 const STATUSES = ['scheduled', 'in_progress', 'finished']
+const STAGE_LABELS = [
+  { key: 'all', label: 'Todos' },
+  { key: 'group_stage', label: 'Grupos' },
+  { key: 'round_of_32', label: 'R32' },
+  { key: 'round_of_16', label: 'Octavos' },
+  { key: 'quarter_final', label: 'Cuartos' },
+  { key: 'semi_final', label: 'Semis' },
+  { key: 'third_place', label: '3°' },
+  { key: 'final', label: 'Final' },
+]
 const EMPTY_MATCH = { homeTeam: '', awayTeam: '', matchDate: '', stage: 'group_stage', group: '', venue: '', matchNumber: '' }
 
 export default function AdminMatches() {
@@ -22,6 +32,7 @@ export default function AdminMatches() {
   const [saving, setSaving] = useState(false)
   const [bulkUploading, setBulkUploading] = useState(false)
   const { toasts, addToast, removeToast } = useToast()
+  const [stageFilter, setStageFilter] = useState('all')
 
   useEffect(() => {
     Promise.all([api.get('/admin/matches'), api.get('/admin/teams')])
@@ -160,15 +171,34 @@ export default function AdminMatches() {
           />
         </div>
 
+        {/* Stage filter */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {STAGE_LABELS.map(s => (
+            <button
+              key={s.key}
+              onClick={() => setStageFilter(s.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                stageFilter === s.key
+                  ? 'bg-brand-primary text-white'
+                  : 'bg-brand-elevated text-brand-muted'
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
         {editing === 'new' && <MatchForm form={form} set={set} teams={teams} saving={saving} onSave={save} onCancel={cancel} />}
 
-        {matches.map(m => (
-          editing === m._id ? (
-            <MatchForm key={m._id} form={form} set={set} teams={teams} saving={saving} onSave={save} onCancel={cancel} />
-          ) : (
-            <MatchRow key={m._id} match={m} onEdit={() => startEdit(m)} onDelete={() => del(m._id)} />
-          )
-        ))}
+        {matches
+          .filter(m => stageFilter === 'all' || m.stage === stageFilter)
+          .map(m => (
+            editing === m._id ? (
+              <MatchForm key={m._id} form={form} set={set} teams={teams} saving={saving} onSave={save} onCancel={cancel} />
+            ) : (
+              <MatchRow key={m._id} match={m} onEdit={() => startEdit(m)} onDelete={() => del(m._id)} />
+            )
+          ))}
       </div>
     </div>
   )

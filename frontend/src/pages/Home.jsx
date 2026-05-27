@@ -4,6 +4,8 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
 import { Trophy, Users, Swords, Star, Moon, Sun, Clock, ChevronRight } from 'lucide-react'
 import api from '../services/api'
+import { driver } from 'driver.js'
+import 'driver.js/dist/driver.css'
 
 const TOURNAMENT_FIELDS = ['champion', 'runnerUp', 'topScorer', 'topAssister', 'mostYellowCards', 'mostRedCards']
 
@@ -35,6 +37,136 @@ export default function Home() {
   const [tournamentPending, setTournamentPending] = useState(null)
   const [countdown, setCountdown] = useState(null)
   const [pendingLoading, setPendingLoading] = useState(true)
+
+  // Onboarding tour — shown once per device
+  useEffect(() => {
+    if (localStorage.getItem('tour_done')) return
+    const t = setTimeout(() => {
+      const driverObj = driver({
+        showProgress: true,
+        progressText: '{{current}} de {{total}}',
+        nextBtnText: 'Siguiente →',
+        prevBtnText: '← Atrás',
+        doneBtnText: '¡Listo!',
+        overlayColor: 'rgba(0,0,0,0.75)',
+        popoverClass: 'tour-popover',
+        steps: [
+          {
+            popover: {
+              title: '¡Bienvenido al Concurso del Mundial 2026! 🏆',
+              description:
+                'Este es un juego de pronósticos. Predecís los resultados de los 104 partidos del Mundial, elegís al campeón, al goleador y más — y competís con amigos para ver quién sabe más de fútbol.',
+              side: 'over',
+              align: 'center',
+            },
+          },
+          {
+            element: '#tour-partidos',
+            popover: {
+              title: '⚽ Partidos',
+              description:
+                'Aquí predecís el resultado de cada partido <strong>antes de que empiece</strong>. Podés ganar hasta 5 puntos por partido si acertás el marcador exacto.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#tour-grupos',
+            popover: {
+              title: '👥 Mis Grupos',
+              description:
+                'Creá un grupo privado o unite al de tus amigos para tener una tabla de posiciones propia y competir entre ustedes.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#tour-ranking',
+            popover: {
+              title: '🏅 Ranking',
+              description:
+                'Seguí tu posición en el ranking global y mirá cómo van los demás participantes a medida que avanzan los partidos.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#tour-torneo',
+            popover: {
+              title: '⭐ Torneo',
+              description:
+                'Antes de que arranque el torneo podés predecir el campeón, el goleador, el asistidor y más. ¡Estos pronósticos valen muchos puntos!',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#tour-scoring',
+            popover: {
+              title: '📊 Sistema de puntuación',
+              description:
+                'Repasá cómo se puntúa. Un pronóstico perfecto (resultado exacto) vale 5 puntos. Los pronósticos del torneo pueden darte hasta 50 puntos extra.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-partidos',
+            popover: {
+              title: '⚽ Pestaña Predicciones',
+              description:
+                'Desde acá accedés a todos los partidos del torneo para hacer y ver tus pronósticos.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-grupos',
+            popover: {
+              title: '👥 Pestaña Grupos',
+              description:
+                'Acá creás grupos privados o te unís al de tus amigos con un código de invitación.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-inicio',
+            popover: {
+              title: '🏠 Pestaña Inicio',
+              description:
+                'Tu pantalla principal: resumen de pendientes, accesos rápidos y el sistema de puntuación.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-ranking',
+            popover: {
+              title: '🏅 Pestaña Ranking',
+              description:
+                'La tabla de posiciones global. Ves tu posición y la de todos los participantes.',
+              side: 'top',
+              align: 'center',
+            },
+          },
+          {
+            element: '#nav-perfil',
+            popover: {
+              title: '👤 Pestaña Perfil',
+              description:
+                'Tu perfil: nombre, avatar, cambio de contraseña y estadísticas personales. ¡Ya sabés todo, a jugar!',
+              side: 'top',
+              align: 'center',
+            },
+          },
+        ],
+        onDestroyed: () => localStorage.setItem('tour_done', '1'),
+      })
+      driverObj.drive()
+    }, 600)
+    return () => clearTimeout(t)
+  }, [])
 
   useEffect(() => {
     const now = Date.now()
@@ -179,6 +311,7 @@ export default function Home() {
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <QuickCard
+            id="tour-grupos"
             icon={<Users size={28} />}
             title="Mis Grupos"
             desc="Ver y crear grupos"
@@ -186,6 +319,7 @@ export default function Home() {
             from="#0E593E" to="#041F15" iconColor="#4ade80"
           />
           <QuickCard
+            id="tour-partidos"
             icon={<Swords size={28} />}
             title="Partidos"
             desc="Predecir partidos"
@@ -193,6 +327,7 @@ export default function Home() {
             from="#7A1515" to="#300505" iconColor="#f87171"
           />
           <QuickCard
+            id="tour-ranking"
             icon={<Trophy size={28} />}
             title="Ranking"
             desc="Tabla de posiciones"
@@ -200,6 +335,7 @@ export default function Home() {
             from="#5A4200" to="#231900" iconColor="#fbbf24"
           />
           <QuickCard
+            id="tour-torneo"
             icon={<Star size={28} />}
             title="Torneo"
             desc="Predicciones globales"
@@ -209,7 +345,7 @@ export default function Home() {
         </div>
 
         {/* Scoring guide */}
-        <div className="card mb-6">
+        <div id="tour-scoring" className="card mb-6">
           <p className="font-bold text-brand-text mb-3 text-sm">Sistema de puntuación</p>
           <div className="space-y-1 text-sm">
             {[
@@ -244,9 +380,10 @@ export default function Home() {
   )
 }
 
-function QuickCard({ icon, title, desc, onClick, from, to, iconColor }) {
+function QuickCard({ id, icon, title, desc, onClick, from, to, iconColor }) {
   return (
     <button
+      id={id}
       onClick={onClick}
       className="relative overflow-hidden rounded-2xl p-4 text-left active:scale-[0.97] transition-transform duration-100 min-h-[110px] flex flex-col justify-between"
       style={{ background: `linear-gradient(145deg, ${from}, ${to})` }}

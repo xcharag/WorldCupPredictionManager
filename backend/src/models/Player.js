@@ -10,6 +10,8 @@ const playerSchema = new mongoose.Schema(
       required: true,
     },
     number: { type: Number },
+    dateOfBirth: { type: Date },
+    footballDataId: { type: String, trim: true, index: true, sparse: true },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

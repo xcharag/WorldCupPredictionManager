@@ -29,6 +29,7 @@ const matchSchema = new mongoose.Schema(
       default: 'scheduled',
     },
     sportsdbId: { type: String, trim: true },
+    footballDataId: { type: String, trim: true },
     thumbUrl: { type: String, trim: true },
   },
   { timestamps: true }

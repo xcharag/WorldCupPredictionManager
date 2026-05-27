@@ -12,6 +12,7 @@ const teamSchema = new mongoose.Schema(
       enum: ['UEFA', 'CONMEBOL', 'CONCACAF', 'CAF', 'AFC', 'OFC'],
     },
     sportsdbId: { type: String, trim: true },
+    footballDataId: { type: String, trim: true },
     badgeUrl: { type: String, trim: true },
     jerseyUrl: { type: String, trim: true },
     fanartUrl: { type: String, trim: true },

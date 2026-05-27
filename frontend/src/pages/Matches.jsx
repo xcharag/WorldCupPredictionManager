@@ -13,6 +13,7 @@ const STAGES = [
   { key: 'round_of_16', label: 'R16' },
   { key: 'quarter_final', label: 'QF' },
   { key: 'semi_final', label: 'SF' },
+  { key: 'third_place', label: '3°' },
   { key: 'final', label: 'Final' },
 ]
 
