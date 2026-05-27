@@ -6,7 +6,7 @@ const { body, validationResult } = require('express-validator');
 const passport = require('passport');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
-const { sendVerificationEmail } = require('../services/email');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/email');
 
 const signToken = (userId) =>
   jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
@@ -102,6 +102,59 @@ router.get('/verify-email', async (req, res) => {
     res.json({ message: 'Email verified successfully!' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: 'El email es requerido' });
+
+  try {
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+
+    // Always respond the same way to avoid email enumeration
+    if (!user || (!user.password && user.googleId)) {
+      return res.json({ message: 'Si el email está registrado, recibirás un enlace en los próximos minutos.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    user.passwordResetToken = token;
+    user.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    await sendPasswordResetEmail(user, token);
+
+    res.json({ message: 'Si el email está registrado, recibirás un enlace en los próximos minutos.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error al enviar el email' });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ message: 'Token y contraseña son requeridos' });
+  if (password.length < 6) return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres' });
+
+  try {
+    const user = await User.findOne({
+      passwordResetToken: token,
+      passwordResetExpires: { $gt: Date.now() },
+    }).select('+passwordResetToken +passwordResetExpires +password');
+
+    if (!user) return res.status(400).json({ message: 'El enlace es inválido o ya expiró' });
+
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'Contraseña restablecida correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error al restablecer la contraseña' });
   }
 });
 

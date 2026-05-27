@@ -137,7 +137,7 @@ export default function GroupDashboard() {
       </div>
 
       {confirmDialog && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/60 backdrop-blur-sm sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="card w-full max-w-xs p-5">
             <p className="text-sm text-brand-text text-center leading-relaxed mb-5">{confirmDialog.message}</p>
             <div className="flex gap-3">

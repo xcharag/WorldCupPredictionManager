@@ -101,6 +101,12 @@ export default function Login() {
             {loading ? 'Entrando...' : 'Iniciar sesion'}
           </button>
 
+          <p className="text-right -mt-1">
+            <Link to="/forgot-password" className="text-xs text-brand-muted hover:text-brand-primary transition-colors">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </p>
+
           <div className="flex items-center gap-3 my-1">
             <div className="flex-1 h-px bg-brand-border" />
             <span className="text-xs text-brand-muted">o</span>
