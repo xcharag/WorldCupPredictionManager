@@ -3,6 +3,20 @@ const { Strategy: LocalStrategy } = require('passport-local');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 const User = require('../models/User');
 
+/**
+ * Generate a random unique nickname for Google OAuth users
+ * Format: user-{random alphanumeric string}
+ * Example: user-92342hu, user-k83jd9a
+ */
+function generateRandomNickname() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let random = '';
+  for (let i = 0; i < 7; i++) {
+    random += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `user-${random}`;
+}
+
 // Local strategy: login by nickname + password
 passport.use(
   new LocalStrategy({ usernameField: 'nickname', passwordField: 'password' }, async (nickname, password, done) => {
@@ -51,16 +65,24 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your_googl
             return done(null, user);
           }
 
-          // New user via Google — generate a unique nickname
-          const baseName = (profile.displayName || email.split('@')[0]).replace(/\s+/g, '').toLowerCase().slice(0, 16);
-          let nickname = baseName;
-          let counter = 1;
-          while (await User.findOne({ nickname })) {
-            nickname = `${baseName}${counter++}`;
+          // New user via Google — generate a random unique nickname (e.g., user-92342hu)
+          let nickname = generateRandomNickname();
+          let attempts = 0;
+          const maxAttempts = 10;
+          
+          // Retry if nickname already exists (extremely rare with random generation)
+          while (await User.findOne({ nickname }) && attempts < maxAttempts) {
+            nickname = generateRandomNickname();
+            attempts++;
+          }
+          
+          if (attempts >= maxAttempts) {
+            console.error('[Google OAuth Strategy] Failed to generate unique nickname after', maxAttempts, 'attempts');
+            return done(new Error('Could not generate unique nickname'));
           }
 
           user = await User.create({
-            name: profile.displayName || baseName,
+            name: profile.displayName || email.split('@')[0],
             nickname,
             email,
             googleId: profile.id,

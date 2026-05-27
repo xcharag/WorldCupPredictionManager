@@ -57,10 +57,6 @@ services:
       EMAIL_USER: ${EMAIL_USER}
       EMAIL_PASS: ${EMAIL_PASS}
       EMAIL_FROM: ${EMAIL_FROM}
-    networks:
-      - app-net
-    env_file:
-      - .env
 
   # ── Frontend (nginx + built React app) ──────────────────
   frontend:
@@ -81,23 +77,3 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    networks:
-      - app-net
-      - coolify
-    env_file:
-      - .env
-    labels:
-      # Basic Traefik configuration (Coolify will add more labels automatically)
-      - "traefik.enable=true"
-      - "traefik.http.middlewares.gzip.compress=true"
-      - "traefik.http.services.worldcup-frontend.loadbalancer.server.port=80"
-      # Increased timeouts for OAuth and slow connections
-      - "traefik.http.services.worldcup-frontend.loadbalancer.server.timeout.read=120s"
-      - "traefik.http.services.worldcup-frontend.loadbalancer.server.timeout.write=120s"
-      - "traefik.http.services.worldcup-frontend.loadbalancer.server.timeout.idle=120s"
-
-networks:
-  app-net:
-    driver: bridge
-  coolify:
-    external: true

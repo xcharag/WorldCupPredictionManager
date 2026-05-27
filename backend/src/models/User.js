@@ -42,10 +42,8 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Indexes for frequently queried fields to prevent timeouts
-userSchema.index({ email: 1 });
-userSchema.index({ nickname: 1 });
-userSchema.index({ googleId: 1 }, { sparse: true });
+// Note: Indexes are auto-created by unique: true in schema definition
+// No need for explicit userSchema.index() calls to avoid duplicates
 
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
