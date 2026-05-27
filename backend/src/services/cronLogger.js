@@ -161,8 +161,8 @@ function wrap(name, fn) {
         if (ringBuf[name].length > MAX_MEM) ringBuf[name].length = MAX_MEM;
       }
 
-      // MinIO: persist if this was real work (>50ms) or an error
-      const shouldPersist = entry.status === 'error' || (entry.durationMs ?? 0) > MIN_MINIO_MS;
+      // MinIO: only persist errors
+      const shouldPersist = entry.status === 'error';
       if (shouldPersist && process.env.MINIO_ENDPOINT) {
         persistLog(entry).catch(e =>
           console.error('[CronLogger] MinIO write failed:', e.message)
