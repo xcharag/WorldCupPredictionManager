@@ -34,6 +34,7 @@ import AdminRosters from './pages/admin/AdminRosters'
 import AdminResults from './pages/admin/AdminResults'
 import AdminScoring from './pages/admin/AdminScoring'
 import AdminSettings from './pages/admin/AdminSettings'
+import AdminCron from './pages/admin/AdminCron'
 
 export default function App() {
   return (
@@ -77,6 +78,7 @@ export default function App() {
             <Route path="/admin/results" element={<ProtectedRoute adminOnly><AdminResults /></ProtectedRoute>} />
             <Route path="/admin/scoring" element={<ProtectedRoute adminOnly><AdminScoring /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
+            <Route path="/admin/cron" element={<ProtectedRoute adminOnly><AdminCron /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -7,6 +7,7 @@ const MatchReminder = require('../models/MatchReminder');
 const { sendMatchReminderEmail } = require('./email');
 const fd = require('./footballdata');
 const { calculateMatchPredictions } = require('./scoring');
+const cl = require('./cronLogger');
 
 // How many minutes before/after the exact timing window we check.
 // Cron runs every 5 min, so ±4 min window catches every match.
@@ -21,6 +22,7 @@ const TIMINGS = [
 
 async function sendPendingReminders() {
   const now = Date.now();
+  let sent = 0;
 
   for (const { key, ms } of TIMINGS) {
     const windowStart = new Date(now + ms - WINDOW_MS);
@@ -46,6 +48,7 @@ async function sendPendingReminders() {
           // insertOne with unique index will throw if already sent — skip duplicates
           await MatchReminder.create({ user: user._id, match: match._id, timing: key });
           await sendMatchReminderEmail(user, match, key);
+          sent++;
         } catch (err) {
           if (err.code === 11000) continue; // duplicate — already sent
           console.error(`[Scheduler] Error sending ${key} reminder to ${user.email}:`, err.message);
@@ -53,6 +56,7 @@ async function sendPendingReminders() {
       }
     }
   }
+  return sent > 0 ? `${sent} emails enviados` : null;
 }
 
 // ─── football-data.org status → app status ───────────────────────────────────
@@ -91,11 +95,9 @@ function normPos(apiPos) { return POSITION_MAP[apiPos] || 'MID'; }
 // the football-data.org /matches/:id endpoint for each and updates MongoDB.
 // API calls are naturally throttled by the 6.2 s delay in footballdata.js.
 async function syncLiveMatches() {
-  if (!process.env.FOOTBALL_DATA_API_KEY) return;
+  if (!process.env.FOOTBALL_DATA_API_KEY) return null;
 
   const now = new Date();
-  // Also check scheduled matches whose kickoff was in the last 15 minutes
-  // (they may have just gone IN_PLAY before our DB status was updated).
   const recentStart = new Date(now.getTime() - 15 * 60 * 1000);
 
   const candidates = await Match.find({
@@ -106,8 +108,9 @@ async function syncLiveMatches() {
     ],
   });
 
-  if (!candidates.length) return;
+  if (!candidates.length) return null;
 
+  let updated = 0;
   for (const match of candidates) {
     try {
       const { match: apiMatch } = await fd.getMatch(match.footballDataId);
@@ -122,6 +125,7 @@ async function syncLiveMatches() {
         if (score.away !== null) match.awayScore = score.away;
       }
       await match.save();
+      updated++;
 
       // Trigger prediction scoring when a match transitions to finished
       if (!wasFinished && newStatus === 'finished') {
@@ -136,13 +140,14 @@ async function syncLiveMatches() {
       console.error(`[Scheduler] Live update failed for match ${match._id}:`, err.message);
     }
   }
+  return updated > 0 ? `${updated}/${candidates.length} partidos actualizados` : null;
 }
 
 // ─── Team roster sync ─────────────────────────────────────────────────────────
 // Called every hour. Re-fetches all 48 WC squads (1 API call) and upserts
 // players so that late call-ups and substitutions stay current.
 async function syncTeamRosters() {
-  if (!process.env.FOOTBALL_DATA_API_KEY) return;
+  if (!process.env.FOOTBALL_DATA_API_KEY) return null;
 
   let updated = 0;
   try {
@@ -173,39 +178,36 @@ async function syncTeamRosters() {
     console.log(`[Scheduler] Roster sync complete — ${updated} players upserted`);
   } catch (err) {
     console.error('[Scheduler] Roster sync failed:', err.message);
+    throw err;
   }
+  return `${updated} jugadores sincronizados`;
 }
 
 function startScheduler() {
+  // ── Register jobs with the logger ──────────────────────────────────────────
+  cl.register('recordatorios',  '*/5 * * * *', 'Envía emails de recordatorio antes de partidos');
+  cl.register('marcadores',     '* * * * *',   'Sincroniza marcadores en vivo desde football-data.org');
+  cl.register('plantillas',     '0 * * * *',   'Actualiza plantillas de equipos desde football-data.org');
+  cl.register('limpieza-logs',  '30 2 * * *',  'Elimina logs de MinIO con más de 7 días');
+
   // ── Match reminders (every 5 min) ──────────────────────────────────────────
-  cron.schedule('*/5 * * * *', async () => {
-    try {
-      await sendPendingReminders();
-    } catch (err) {
-      console.error('[Scheduler] Unexpected error:', err.message);
-    }
-  });
+  cron.schedule('*/5 * * * *', cl.wrap('recordatorios', sendPendingReminders));
   console.log('[Scheduler] Match reminder cron started (every 5 min)');
 
   // ── Live score updates (every 1 min) ───────────────────────────────────────
-  cron.schedule('* * * * *', async () => {
-    try {
-      await syncLiveMatches();
-    } catch (err) {
-      console.error('[Scheduler] Live-score sync error:', err.message);
-    }
-  });
+  cron.schedule('* * * * *', cl.wrap('marcadores', syncLiveMatches));
   console.log('[Scheduler] Live-score cron started (every 1 min)');
 
   // ── Team roster refresh (every 1 hour) ─────────────────────────────────────
-  cron.schedule('0 * * * *', async () => {
-    try {
-      await syncTeamRosters();
-    } catch (err) {
-      console.error('[Scheduler] Roster sync error:', err.message);
-    }
-  });
+  cron.schedule('0 * * * *', cl.wrap('plantillas', syncTeamRosters));
   console.log('[Scheduler] Team-roster cron started (every 1 h)');
+
+  // ── Nightly log cleanup (02:30 UTC) ────────────────────────────────────────
+  cron.schedule('30 2 * * *', cl.wrap('limpieza-logs', async () => {
+    const n = await cl.cleanupOldLogs();
+    return `${n} archivos eliminados`;
+  }));
+  console.log('[Scheduler] Log cleanup cron started (daily 02:30 UTC)');
 }
 
 module.exports = { startScheduler };
