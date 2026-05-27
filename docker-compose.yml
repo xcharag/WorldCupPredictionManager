@@ -10,10 +10,10 @@ services:
       - "5000"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     environment:
       PORT: "5000"
       NODE_ENV: production
@@ -67,8 +67,15 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - internal
 

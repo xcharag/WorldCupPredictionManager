@@ -88,7 +88,13 @@ export default function GroupDashboard() {
           <div className="flex flex-wrap gap-2">
             {group.members?.map(m => (
               <div key={m._id} className="bg-brand-elevated text-xs px-2.5 py-1 rounded-full text-brand-text font-medium flex items-center gap-2">
-                <span>@{m.nickname}</span>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/users/${m._id}`)}
+                  className="hover:text-brand-primary transition-colors"
+                >
+                  @{m.nickname}
+                </button>
                 {isCreator && m._id !== group.creator?._id && (
                   <button
                     type="button"

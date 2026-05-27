@@ -22,6 +22,7 @@ import TournamentPredictions from './pages/TournamentPredictions'
 import Leaderboard from './pages/Leaderboard'
 import Matches from './pages/Matches'
 import Profile from './pages/Profile'
+import UserProfile from './pages/UserProfile'
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -62,6 +63,7 @@ export default function App() {
             {/* Global leaderboard */}
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/users/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />

@@ -134,9 +134,10 @@ export default function Leaderboard() {
             const ft = entry.user.favoriteTeam
             const initials = entry.user.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
             return (
-              <div
+              <button
                 key={entry.user._id}
-                className={`flex items-center py-2.5 border-b border-brand-border last:border-0 ${isMe ? 'bg-brand-primary/5 -mx-4 px-4 rounded-xl' : ''}`}
+                onClick={() => navigate(`/users/${entry.user._id}`)}
+                className={`flex items-center py-2.5 border-b border-brand-border last:border-0 w-full text-left active:bg-brand-elevated transition-colors ${isMe ? 'bg-brand-primary/5 -mx-4 px-4 rounded-xl' : ''}`}
               >
                 <div className="w-10 flex justify-center">
                   <RankBadge rank={entry.rank} />
@@ -169,7 +170,7 @@ export default function Leaderboard() {
                 <span className="w-12 text-center text-sm text-brand-muted">{entry.matchPoints}</span>
                 <span className="w-14 text-center text-sm text-brand-muted">{entry.tournamentPoints}</span>
                 <span className="w-14 text-right font-bold text-brand-text">{entry.totalPoints}</span>
-              </div>
+              </button>
             )
           })}
 
