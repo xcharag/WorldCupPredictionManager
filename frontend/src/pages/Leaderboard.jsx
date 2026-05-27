@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { LeaderboardSkeleton } from '../components/Skeletons'
 import { useAuth } from '../contexts/AuthContext'
 import SearchableSelect from '../components/SearchableSelect'
+import MinioImage from '../components/MinioImage'
 
 function RankBadge({ rank }) {
   if (rank === 1) return <div className="rank-badge bg-yellow-500/20 text-yellow-400">🥇</div>
@@ -52,7 +53,7 @@ export default function Leaderboard() {
       .finally(() => setLoading(false))
   }, [scope])
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <LeaderboardSkeleton />
 
   const myEntry = entries.find(e => e.user._id === user?._id)
 
@@ -86,8 +87,29 @@ export default function Leaderboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <RankBadge rank={myEntry.rank} />
+                {/* Avatar */}
+                <div className="w-9 h-9 rounded-full overflow-hidden bg-brand-elevated flex items-center justify-center flex-shrink-0">
+                  {user?.avatar ? (
+                    <MinioImage src={user.avatar} alt="me" className="w-full h-full object-cover"
+                      fallback={<span className="text-sm font-bold text-brand-primary">{user?.name?.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()}</span>}
+                    />
+                  ) : (
+                    <span className="text-sm font-bold text-brand-primary">
+                      {user?.name?.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase()}
+                    </span>
+                  )}
+                </div>
                 <div>
-                  <p className="font-bold">@{myEntry.user.nickname}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-bold">@{myEntry.user.nickname}</p>
+                    {myEntry.user.favoriteTeam && (
+                      myEntry.user.favoriteTeam.badgeUrl ? (
+                        <MinioImage src={myEntry.user.favoriteTeam.badgeUrl} alt="" className="w-4 h-4 object-contain" fallback={<span className="text-sm">{myEntry.user.favoriteTeam.flag}</span>} />
+                      ) : (
+                        <span className="text-sm">{myEntry.user.favoriteTeam.flag}</span>
+                      )
+                    )}
+                  </div>
                   <p className="text-xs text-brand-muted">{myEntry.matchPoints} partido + {myEntry.tournamentPoints} torneo</p>
                 </div>
               </div>
@@ -109,18 +131,39 @@ export default function Leaderboard() {
 
           {entries.map((entry) => {
             const isMe = entry.user._id === user?._id
+            const ft = entry.user.favoriteTeam
+            const initials = entry.user.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
             return (
               <div
                 key={entry.user._id}
-                className={`flex items-center py-3 border-b border-brand-border last:border-0 ${isMe ? 'bg-brand-primary/5 -mx-4 px-4 rounded-xl' : ''}`}
+                className={`flex items-center py-2.5 border-b border-brand-border last:border-0 ${isMe ? 'bg-brand-primary/5 -mx-4 px-4 rounded-xl' : ''}`}
               >
                 <div className="w-10 flex justify-center">
                   <RankBadge rank={entry.rank} />
                 </div>
-                <div className="flex-1 pl-2 min-w-0">
-                  <p className={`font-semibold text-sm truncate ${isMe ? 'text-brand-primary' : ''}`}>
-                    @{entry.user.nickname}
-                  </p>
+                {/* Avatar */}
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-brand-elevated flex items-center justify-center flex-shrink-0 mr-2">
+                  {entry.user.avatar ? (
+                    <MinioImage src={entry.user.avatar} alt={entry.user.nickname} className="w-full h-full object-cover"
+                      fallback={<span className="text-xs font-bold text-brand-primary">{initials}</span>}
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-brand-primary">{initials}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className={`font-semibold text-sm truncate ${isMe ? 'text-brand-primary' : ''}`}>
+                      @{entry.user.nickname}
+                    </p>
+                    {ft && (
+                      ft.badgeUrl ? (
+                        <MinioImage src={ft.badgeUrl} alt={ft.shortName} title={ft.name} className="w-4 h-4 object-contain flex-shrink-0" fallback={<span className="text-sm leading-none">{ft.flag}</span>} />
+                      ) : (
+                        <span className="text-sm leading-none flex-shrink-0" title={ft.name}>{ft.flag}</span>
+                      )
+                    )}
+                  </div>
                   <p className="text-xs text-brand-muted truncate">{entry.user.name}</p>
                 </div>
                 <span className="w-12 text-center text-sm text-brand-muted">{entry.matchPoints}</span>

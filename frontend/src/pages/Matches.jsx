@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import MatchCard from '../components/MatchCard'
+import { MatchListSkeleton } from '../components/Skeletons'
 import { useToast, ToastContainer } from '../components/Toast'
+import TournamentPredictions from './TournamentPredictions'
 
 const STAGES = [
   { key: 'all', label: 'Todos' },
@@ -24,6 +25,11 @@ export default function Matches() {
   const [selectedGroups, setSelectedGroups] = useState([])
   const [filterDate, setFilterDate] = useState('')
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState('partidos')
+  const location = useLocation()
+  const [filterUnpredicted, setFilterUnpredicted] = useState(
+    () => new URLSearchParams(location.search).get('filter') === 'unpredicted'
+  )
 
   useEffect(() => {
     Promise.all([api.get('/matches'), api.get('/predictions/mine')])
@@ -52,23 +58,43 @@ export default function Matches() {
       const matchDay = new Date(m.matchDate).toISOString().slice(0, 10)
       if (matchDay !== filterDate) return false
     }
+    if (filterUnpredicted && predictionsByMatch[m._id]) return false
     return true
-  }), [matches, stage, selectedGroups, filterDate, showGroupFilters])
+  }), [matches, stage, selectedGroups, filterDate, filterUnpredicted, predictionsByMatch, showGroupFilters])
 
   function canEditPrediction(match) {
     if (match.status !== 'scheduled') return false
     return new Date(match.matchDate) > new Date()
   }
 
-  if (loading) return <LoadingSpinner fullScreen />
-
   return (
     <div className="page max-w-md mx-auto px-4 pt-6">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <h1 className="section-title mb-4">Partidos</h1>
+      <h1 className="section-title mb-3">Predicciones</h1>
 
+      {/* Segment toggle */}
+      <div className="flex rounded-xl bg-brand-elevated p-1 mb-4">
+        <button
+          onClick={() => setView('partidos')}
+          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${view === 'partidos' ? 'bg-brand-surface text-brand-text shadow-sm' : 'text-brand-muted'}`}
+        >
+          Partidos
+        </button>
+        <button
+          onClick={() => setView('torneo')}
+          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${view === 'torneo' ? 'bg-brand-surface text-brand-text shadow-sm' : 'text-brand-muted'}`}
+        >
+          Tops
+        </button>
+      </div>
+
+      {view === 'torneo' && <TournamentPredictions embedded />}
+
+      {view === 'partidos' && loading && <MatchListSkeleton embedded />}
+
+      {view === 'partidos' && !loading && <>
       {/* Stage filter */}
-      <div className="flex gap-2 pb-3 overflow-x-auto no-scrollbar -mx-4 px-4">
+      <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar -mx-4 px-4">
         {STAGES.map(s => (
           <button
             key={s.key}
@@ -130,6 +156,16 @@ export default function Matches() {
             </div>
           </div>
         )}
+        {/* Sin predecir toggle */}
+        <button
+          onClick={() => setFilterUnpredicted(v => !v)}
+          className="flex items-center gap-2.5 cursor-pointer select-none w-fit"
+        >
+          <div className={`relative w-9 h-5 rounded-full transition-colors ${filterUnpredicted ? 'bg-brand-primary' : 'bg-brand-elevated'}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${filterUnpredicted ? 'translate-x-4' : 'translate-x-0'}`} />
+          </div>
+          <span className="text-xs text-brand-muted">Solo sin predecir</span>
+        </button>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -153,6 +189,7 @@ export default function Matches() {
           ))
         )}
       </div>
+      </>}
     </div>
   )
 }

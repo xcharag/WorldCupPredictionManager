@@ -49,7 +49,7 @@ export default function Login() {
             className="w-16 h-16 object-contain drop-shadow-2xl"
           />
           <h1 className="text-2xl font-extrabold text-white drop-shadow-lg">Mundial 2026</h1>
-          <p className="text-white/70 text-sm">Pronostica, compite y gana.</p>
+          <p className="text-white/70 text-sm">Pronosticá, competí y ganá.</p>
         </div>
       </div>
 
@@ -77,7 +77,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="label">Contrasena</label>
+            <label className="label">Contraseña</label>
             <div className="relative">
               <input
                 className="input pr-12"
@@ -119,7 +119,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-brand-muted text-sm mt-6">
-          No tienes cuenta?{' '}
+          No tenes cuenta?{' '}
           <Link to="/register" className="text-brand-primary font-semibold">Registrate</Link>
         </p>
       </div>

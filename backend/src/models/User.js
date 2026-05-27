@@ -23,12 +23,21 @@ const userSchema = new mongoose.Schema(
     password: { type: String, select: false },
     googleId: { type: String, sparse: true },
     avatar: { type: String, default: '' },
+    favoriteTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
     isEmailVerified: { type: Boolean, default: false },
     emailVerificationToken: { type: String, select: false },
     emailVerificationExpires: { type: Date, select: false },
     passwordResetToken: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },
     isAdmin: { type: Boolean, default: false },
+    notificationPreferences: {
+      type: [{ type: String, enum: ['24h', '6h', '4h', '1h'] }],
+      default: [],
+      validate: {
+        validator: (v) => v.length <= 2,
+        message: 'Máximo 2 preferencias de notificación permitidas',
+      },
+    },
   },
   { timestamps: true }
 );

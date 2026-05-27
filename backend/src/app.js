@@ -17,18 +17,22 @@ const leaderboardRoutes = require('./routes/leaderboard');
 const playerRoutes = require('./routes/players');
 const teamRoutes = require('./routes/teams');
 const adminRoutes = require('./routes/admin');
+const profileRoutes = require('./routes/profile');
+const imageRoutes = require('./routes/images');
+const { startScheduler } = require('./services/scheduler');
 
 const app = express();
 
 // Trust the first proxy (nginx/Traefik in production)
 app.set('trust proxy', 1);
 
-// Connect to MongoDB
-connectDB().catch((err) => {
-  console.error('MongoDB connection failed:', err.message);
-  process.exit(1);
-});
-
+// Connect to MongoDB, then start reminder scheduler
+connectDB()
+  .then(() => startScheduler())
+  .catch((err) => {
+    console.error('MongoDB connection failed:', err.message);
+    process.exit(1);
+  });
 // Security middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(mongoSanitize());
@@ -64,6 +68,8 @@ app.use('/api/predictions', predictionRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/images', imageRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));

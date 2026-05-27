@@ -28,6 +28,8 @@ const matchSchema = new mongoose.Schema(
       enum: ['scheduled', 'in_progress', 'finished'],
       default: 'scheduled',
     },
+    sportsdbId: { type: String, trim: true },
+    thumbUrl: { type: String, trim: true },
   },
   { timestamps: true }
 );

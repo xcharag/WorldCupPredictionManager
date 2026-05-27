@@ -8,9 +8,13 @@
     "dev": "nodemon src/app.js",
     "seed:admin": "node src/seeds/admin.js",
     "seed:worldcup": "node src/seeds/worldcup.js",
-    "seed:cleanup": "node src/seeds/cleanup.js"
+    "seed:cleanup": "node src/seeds/cleanup.js",
+    "seed:sportsdb": "node src/seeds/importSportsDB.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1054.0",
+    "@aws-sdk/s3-request-presigner": "^3.1054.0",
+    "axios": "^1.16.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -19,13 +23,16 @@
     "express-rate-limit": "^7.3.1",
     "express-validator": "^7.1.0",
     "helmet": "^7.1.0",
+    "ioredis": "^5.11.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.3",
     "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "nodemailer": "^6.9.14",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
+    "sharp": "^0.34.5",
     "uuid": "^10.0.0"
   },
   "devDependencies": {

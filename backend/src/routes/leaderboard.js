@@ -13,7 +13,7 @@ const buildEntries = (users, matchPointsMap, tournamentPointsMap) =>
       const matchPts = matchPointsMap[uid] || 0;
       const tournamentPts = tournamentPointsMap[uid] || 0;
       return {
-        user: { _id: member._id, name: member.name, nickname: member.nickname, avatar: member.avatar },
+        user: { _id: member._id, name: member.name, nickname: member.nickname, avatar: member.avatar, favoriteTeam: member.favoriteTeam, favoriteTeam: member.favoriteTeam },
         matchPoints: matchPts,
         tournamentPoints: tournamentPts,
         totalPoints: matchPts + tournamentPts,
@@ -25,7 +25,7 @@ const buildEntries = (users, matchPointsMap, tournamentPointsMap) =>
 // GET /api/leaderboard/global
 router.get('/global', protect, async (req, res) => {
   try {
-    const users = await User.find({}, 'name nickname avatar');
+    const users = await User.find({}, 'name nickname avatar favoriteTeam').populate('favoriteTeam', 'name shortName fifaCode badgeUrl flag');
 
     const matchAgg = await MatchPrediction.aggregate([
       { $match: { group: null, points: { $ne: null } } },
@@ -48,7 +48,7 @@ router.get('/global', protect, async (req, res) => {
 // GET /api/leaderboard/:groupId
 router.get('/:groupId', protect, async (req, res) => {
   try {
-    const group = await Group.findById(req.params.groupId).populate('members', 'name nickname avatar');
+    const group = await Group.findById(req.params.groupId).populate({ path: 'members', select: 'name nickname avatar favoriteTeam', populate: { path: 'favoriteTeam', select: 'name shortName fifaCode badgeUrl flag' } });
     if (!group) return res.status(404).json({ message: 'Group not found' });
 
     if (!group.members.some((m) => m._id.toString() === req.user._id.toString())) {

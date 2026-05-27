@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
-import LoadingSpinner from '../components/LoadingSpinner'
 import PageHeader from '../components/PageHeader'
+import { TournamentPredictionsSkeleton } from '../components/Skeletons'
 import { useToast, ToastContainer } from '../components/Toast'
 import SearchableSelect from '../components/SearchableSelect'
 import { Lock } from 'lucide-react'
@@ -17,7 +17,7 @@ const FIELDS = [
   { key: 'mostRedCards', label: 'Mas tarjetas rojas', icon: '🟥', points: '+20 pts', type: 'player' },
 ]
 
-export default function TournamentPredictions() {
+export default function TournamentPredictions({ embedded = false }) {
   const { groupId } = useParams()
   const navigate = useNavigate()
   const { toasts, addToast, removeToast } = useToast()
@@ -73,22 +73,24 @@ export default function TournamentPredictions() {
     }
   }
 
-  if (loading) return <LoadingSpinner fullScreen />
+  if (loading) return <TournamentPredictionsSkeleton embedded={embedded} />
 
   return (
-    <div className="page max-w-md mx-auto">
-      <PageHeader
-        title="Pronosticos del torneo"
-        subtitle="Se bloquea en dieciseisavos"
-        onBack={() => navigate(backPath)}
-      />
+    <div className={embedded ? '' : 'page max-w-md mx-auto'}>
+      {!embedded && (
+        <PageHeader
+          title="Pronosticos tops del torneo"
+          subtitle="Se bloquea al finalizar el primer partido"
+          onBack={() => navigate(backPath)}
+        />
+      )}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-      <div className="px-4 pt-4">
+      <div className={embedded ? 'pt-2' : 'px-4 pt-4'}>
         {isLocked && (
           <div className="bg-amber-900/30 border border-amber-700/50 rounded-xl p-3 mb-4 flex items-center gap-2">
             <Lock size={16} className="text-amber-400 flex-shrink-0" />
-            <p className="text-sm text-amber-300">Los pronosticos estan bloqueados porque ya inicio la fase final.</p>
+            <p className="text-sm text-amber-300">Los pronosticos estan bloqueados porque ya hay un partido finalizado.</p>
           </div>
         )}
 
