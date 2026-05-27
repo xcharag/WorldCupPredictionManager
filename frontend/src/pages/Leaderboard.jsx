@@ -137,7 +137,7 @@ export default function Leaderboard() {
               <button
                 key={entry.user._id}
                 onClick={() => navigate(`/users/${entry.user._id}`)}
-                className={`flex items-center py-2.5 border-b border-brand-border last:border-0 w-full text-left active:bg-brand-elevated transition-colors ${isMe ? 'bg-brand-primary/5 -mx-4 px-4 rounded-xl' : ''}`}
+                className={`flex items-center py-2.5 border-b border-brand-border last:border-0 w-full text-left active:bg-brand-elevated transition-colors ${isMe ? 'bg-brand-primary/5 -mx-4 px-4' : ''}`}
               >
                 <div className="w-10 flex justify-center">
                   <RankBadge rank={entry.rank} />
