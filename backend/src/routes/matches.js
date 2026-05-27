@@ -13,8 +13,8 @@ router.get('/', async (req, res) => {
     if (status) filter.status = status;
 
     const matches = await Match.find(filter)
-      .populate('homeTeam', 'name shortName flag')
-      .populate('awayTeam', 'name shortName flag')
+      .populate('homeTeam', 'name shortName flag badgeUrl')
+      .populate('awayTeam', 'name shortName flag badgeUrl')
       .sort({ matchDate: 1 });
 
     res.json(matches);
@@ -27,8 +27,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const match = await Match.findById(req.params.id)
-      .populate('homeTeam', 'name shortName flag')
-      .populate('awayTeam', 'name shortName flag');
+      .populate('homeTeam', 'name shortName flag badgeUrl')
+      .populate('awayTeam', 'name shortName flag badgeUrl');
     if (!match) return res.status(404).json({ message: 'Match not found' });
     res.json(match);
   } catch {

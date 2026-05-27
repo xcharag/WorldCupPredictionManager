@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, select: false },
     googleId: { type: String, sparse: true },
     avatar: { type: String, default: '' },
+    favoriteTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
     isEmailVerified: { type: Boolean, default: false },
     emailVerificationToken: { type: String, select: false },
     emailVerificationExpires: { type: Date, select: false },

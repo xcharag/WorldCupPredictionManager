@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import BottomNav from './components/BottomNav'
 import ProtectedRoute from './components/ProtectedRoute'
+import PageTransition from './components/PageTransition'
 
 // Public pages
 import Login from './pages/Login'
@@ -20,6 +21,7 @@ import PredictionForm from './pages/PredictionForm'
 import TournamentPredictions from './pages/TournamentPredictions'
 import Leaderboard from './pages/Leaderboard'
 import Matches from './pages/Matches'
+import Profile from './pages/Profile'
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard'
@@ -36,6 +38,7 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <div className="min-h-screen bg-brand-bg">
+          <PageTransition>
           <Routes>
             {/* Public */}
             <Route path="/login" element={<Login />} />
@@ -58,6 +61,7 @@ export default function App() {
 
             {/* Global leaderboard */}
             <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
@@ -71,6 +75,7 @@ export default function App() {
             {/* 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </PageTransition>
 
           {/* Bottom nav shown on all protected pages */}
           <BottomNav />

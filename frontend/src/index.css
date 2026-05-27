@@ -157,3 +157,20 @@ html { scroll-behavior: smooth; }
 .pb-safe {
   padding-bottom: calc(80px + var(--safe-area-inset-bottom));
 }
+
+/* ── Page slide transitions ─────────────────────────────────── */
+@keyframes slide-in-right {
+  from { transform: translateX(32px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slide-in-left {
+  from { transform: translateX(-32px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+.page-enter {
+  animation: slide-in-right 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+.page-enter-back {
+  animation: slide-in-left 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}

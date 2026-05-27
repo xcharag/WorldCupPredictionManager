@@ -17,6 +17,8 @@ const leaderboardRoutes = require('./routes/leaderboard');
 const playerRoutes = require('./routes/players');
 const teamRoutes = require('./routes/teams');
 const adminRoutes = require('./routes/admin');
+const profileRoutes = require('./routes/profile');
+const imageRoutes = require('./routes/images');
 
 const app = express();
 
@@ -64,6 +66,8 @@ app.use('/api/predictions', predictionRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/images', imageRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));

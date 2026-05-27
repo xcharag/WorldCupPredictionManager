@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import LoadingSpinner from '../components/LoadingSpinner'
-import PageHeader from '../components/PageHeader'
 import { useToast, ToastContainer } from '../components/Toast'
-import { Lock } from 'lucide-react'
+import { Lock, ArrowLeft } from 'lucide-react'
 import { celebratePredictionSaved } from '../utils/confetti'
+import MinioImage from '../components/MinioImage'
 
 export default function PredictionForm() {
   const { groupId, matchId } = useParams()
@@ -71,27 +71,126 @@ export default function PredictionForm() {
     match.status !== 'scheduled' ||
     (match.matchDate && new Date(match.matchDate).getTime() <= Date.now())
 
+  const dateStr = match.matchDate
+    ? new Date(match.matchDate).toLocaleString('es-ES', {
+        weekday: 'long', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    : null
+
+  const homeTeam = match.homeTeam
+  const awayTeam = match.awayTeam
+
   return (
-    <div className="page max-w-md mx-auto">
-      <PageHeader
-        title="Tu pronostico"
-        subtitle={`${match.homeTeam?.shortName || 'Por definir'} vs ${match.awayTeam?.shortName || 'Por definir'}`}
-        onBack={() => navigate(backPath)}
-      />
+    <div className="min-h-screen bg-brand-bg pb-24">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-      <div className="px-4 pt-6">
-        {/* Match info */}
-        <div className="card mb-6 text-center">
-          <p className="text-xs text-brand-muted mb-2">
-            {match.matchDate ? new Date(match.matchDate).toLocaleString('es-ES', {
-              weekday: 'long', month: 'short', day: 'numeric',
-              hour: '2-digit', minute: '2-digit',
-            }) : '—'}
-          </p>
-          {match.venue && <p className="text-xs text-brand-muted">{match.venue}</p>}
+      {/* ── Match Banner ──────────────────────────────────────── */}
+      <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
+        {/* TheSportsDB thumb — blurred, covers full banner */}
+        {match.thumbUrl && (
+          <MinioImage
+            src={match.thumbUrl}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-sm"
+            style={{ filter: 'blur(6px) brightness(0.45)' }}
+          />
+        )}
+        {/* Gradient background (fallback when no thumb, or always as overlay for readability) */}
+        <div className={`absolute inset-0 bg-gradient-to-r from-brand-navy via-[#0a1535] to-brand-navy ${match.thumbUrl ? 'opacity-60' : 'opacity-100'}`} />
+        {/* Radial glows behind each badge */}
+        <div className="absolute inset-0 flex">
+          <div className="flex-1 bg-gradient-to-r from-brand-primary/20 to-transparent" />
+          <div className="flex-1 bg-gradient-to-l from-brand-accent/20 to-transparent" />
+        </div>
+        {/* Subtle pitch lines */}
+        <div className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 39px, white 39px, white 40px)',
+          }}
+        />
+
+        {/* Back button */}
+        <button
+          onClick={() => navigate(backPath)}
+          className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+        >
+          <ArrowLeft size={18} />
+        </button>
+
+        {/* Stage / round pill */}
+        {match.stage && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/10 backdrop-blur-sm text-white/80">
+              {match.stage}
+            </span>
+          </div>
+        )}
+
+        {/* Teams row */}
+        <div className="relative z-10 flex items-center justify-between px-6 pt-14 pb-4 max-w-md mx-auto">
+
+          {/* Home team */}
+          <div className="flex flex-col items-center gap-2 flex-1">
+            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-xl overflow-hidden">
+              {homeTeam?.badgeUrl ? (
+                <MinioImage
+                  src={homeTeam.badgeUrl}
+                  alt={homeTeam.name}
+                  className="w-16 h-16 object-contain drop-shadow-lg"
+                  fallback={<span className="text-5xl">{homeTeam?.flag || '🏳️'}</span>}
+                />
+              ) : (
+                <span className="text-5xl">{homeTeam?.flag || '🏳️'}</span>
+              )}
+            </div>
+            <p className="text-white font-bold text-sm text-center leading-tight drop-shadow">
+              {homeTeam?.shortName || 'Por definir'}
+            </p>
+          </div>
+
+          {/* VS */}
+          <div className="flex flex-col items-center gap-1 px-2">
+            <span className="text-white/40 text-xs font-bold uppercase tracking-widest">VS</span>
+            {prediction && (
+              <span className="text-white font-black text-2xl tracking-tight">
+                {prediction.predictedHomeScore}–{prediction.predictedAwayScore}
+              </span>
+            )}
+          </div>
+
+          {/* Away team */}
+          <div className="flex flex-col items-center gap-2 flex-1">
+            <div className="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center shadow-xl overflow-hidden">
+              {awayTeam?.badgeUrl ? (
+                <MinioImage
+                  src={awayTeam.badgeUrl}
+                  alt={awayTeam.name}
+                  className="w-16 h-16 object-contain drop-shadow-lg"
+                  fallback={<span className="text-5xl">{awayTeam?.flag || '🏳️'}</span>}
+                />
+              ) : (
+                <span className="text-5xl">{awayTeam?.flag || '🏳️'}</span>
+              )}
+            </div>
+            <p className="text-white font-bold text-sm text-center leading-tight drop-shadow">
+              {awayTeam?.shortName || 'Por definir'}
+            </p>
+          </div>
         </div>
 
+        {/* Date & venue */}
+        <div className="relative z-10 pb-5 text-center max-w-md mx-auto">
+          {dateStr && <p className="text-white/70 text-xs capitalize">{dateStr}</p>}
+          {match.venue && <p className="text-white/50 text-[11px] mt-0.5">{match.venue}</p>}
+        </div>
+
+        {/* Bottom fade into page bg */}
+        <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-brand-bg to-transparent" />
+      </div>
+
+      {/* ── Body ─────────────────────────────────────────────── */}
+      <div className="px-4 pt-4 max-w-md mx-auto">
         {isLocked ? (
           <div className="card text-center">
             <Lock size={40} className="text-brand-muted mx-auto mb-3" />
@@ -112,29 +211,27 @@ export default function PredictionForm() {
         ) : (
           <form onSubmit={handleSubmit}>
             {/* Score picker */}
-            <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="flex items-center justify-center gap-4 mb-6">
               {/* Home team */}
               <div className="flex flex-col items-center gap-2 flex-1">
-                <span className="text-3xl">{match.homeTeam?.flag || '🏳️'}</span>
-                <span className="font-bold">{match.homeTeam?.shortName || 'Por definir'}</span>
                 <ScorePicker
                   value={homeScore}
                   onChange={setHomeScore}
                   onAdjust={(d) => adjustScore(setHomeScore, homeScore, d)}
                 />
+                <span className="text-xs text-brand-muted font-medium">{homeTeam?.shortName || 'Local'}</span>
               </div>
 
-              <div className="text-brand-muted font-bold text-lg mb-6">–</div>
+              <div className="text-brand-muted font-bold text-2xl pb-5">–</div>
 
               {/* Away team */}
               <div className="flex flex-col items-center gap-2 flex-1">
-                <span className="text-3xl">{match.awayTeam?.flag || '🏳️'}</span>
-                <span className="font-bold">{match.awayTeam?.shortName || 'Por definir'}</span>
                 <ScorePicker
                   value={awayScore}
                   onChange={setAwayScore}
                   onAdjust={(d) => adjustScore(setAwayScore, awayScore, d)}
                 />
+                <span className="text-xs text-brand-muted font-medium">{awayTeam?.shortName || 'Visitante'}</span>
               </div>
             </div>
 
@@ -144,9 +241,9 @@ export default function PredictionForm() {
                 <p className="text-xs text-brand-muted mb-1">Resultado esperado</p>
                 <p className="font-semibold">
                   {Number(homeScore) > Number(awayScore)
-                    ? `Gana ${match.homeTeam?.shortName || 'local'}`
+                    ? `Gana ${homeTeam?.shortName || 'local'}`
                     : Number(awayScore) > Number(homeScore)
-                    ? `Gana ${match.awayTeam?.shortName || 'visitante'}`
+                    ? `Gana ${awayTeam?.shortName || 'visitante'}`
                     : 'Empate'}
                 </p>
               </div>
