@@ -32,7 +32,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your_googl
       async (accessToken, refreshToken, profile, done) => {
         try {
           const email = profile.emails?.[0]?.value;
-          if (!email) return done(null, false, { message: 'No email from Google' });
+          if (!email) {
+            console.error('[Google OAuth Strategy] No email in profile:', profile.id);
+            return done(null, false, { message: 'No email from Google' });
+          }
 
           let user = await User.findOne({ googleId: profile.id });
           if (!user) {
@@ -43,6 +46,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your_googl
             if (!user.googleId) {
               user.googleId = profile.id;
               await user.save();
+              console.log(`[Google OAuth Strategy] Linked existing user ${user.email} to Google ID ${profile.id}`);
             }
             return done(null, user);
           }
@@ -64,8 +68,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID !== 'your_googl
             isEmailVerified: true,
           });
 
+          console.log(`[Google OAuth Strategy] Created new user ${user.email} with nickname ${nickname}`);
           return done(null, user);
         } catch (err) {
+          console.error('[Google OAuth Strategy] Error:', err.message);
           return done(err);
         }
       }

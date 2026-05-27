@@ -13,8 +13,11 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.get('/auth/me')
       setUser(data.user)
-    } catch {
+    } catch (error) {
+      console.error('[AuthContext] fetchMe failed:', error.response?.status, error.message)
       localStorage.removeItem('wc_token')
+      setUser(null)
+      throw error
     } finally {
       setLoading(false)
     }
@@ -36,9 +39,14 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  const loginWithToken = (token) => {
+  const loginWithToken = async (token) => {
     localStorage.setItem('wc_token', token)
-    return fetchMe()
+    try {
+      await fetchMe()
+    } catch (error) {
+      localStorage.removeItem('wc_token')
+      throw error
+    }
   }
 
   const logout = async () => {

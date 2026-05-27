@@ -162,16 +162,24 @@ router.post('/reset-password', async (req, res) => {
 router.get('/google', passport.authenticate('google', { session: false, scope: ['profile', 'email'] }));
 
 router.get('/google/callback', (req, res, next) => {
-  passport.authenticate('google', { session: false }, (err, user) => {
+  passport.authenticate('google', { session: false }, (err, user, info) => {
     if (err) {
       console.error('[Google OAuth] Callback error:', err.message || err);
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
     }
     if (!user) {
+      console.error('[Google OAuth] No user returned. Info:', info);
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
     }
-    const token = signToken(user._id);
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    
+    try {
+      const token = signToken(user._id);
+      console.log(`[Google OAuth] Success for user: ${user.email} (${user._id})`);
+      res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    } catch (tokenErr) {
+      console.error('[Google OAuth] Token generation failed:', tokenErr);
+      res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
+    }
   })(req, res, next);
 });
 

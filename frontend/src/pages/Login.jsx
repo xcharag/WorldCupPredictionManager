@@ -6,6 +6,7 @@ import { Eye, EyeOff, Trophy, Swords, Users, Star } from 'lucide-react'
 const OAUTH_ERRORS = {
   google_failed: 'No se pudo iniciar sesión con Google. Por favor intentá de nuevo.',
   auth_failed: 'Error de autenticación. Por favor intentá de nuevo.',
+  token_invalid: 'La sesión de Google expiró o es inválida. Por favor intentá de nuevo.',
 }
 
 export default function Login() {

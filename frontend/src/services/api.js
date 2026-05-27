@@ -18,7 +18,10 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('wc_token')
-      window.location.href = '/login'
+      // Don't auto-redirect during OAuth callback flow - let the component handle it
+      if (!window.location.pathname.includes('/auth/callback')) {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }
