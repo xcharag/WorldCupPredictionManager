@@ -163,7 +163,11 @@ router.get('/google', passport.authenticate('google', { session: false, scope: [
 
 router.get('/google/callback', (req, res, next) => {
   passport.authenticate('google', { session: false }, (err, user) => {
-    if (err || !user) {
+    if (err) {
+      console.error('[Google OAuth] Callback error:', err.message || err);
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
+    }
+    if (!user) {
       return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
     }
     const token = signToken(user._id);

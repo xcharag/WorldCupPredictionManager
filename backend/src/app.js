@@ -24,8 +24,9 @@ const { startScheduler } = require('./services/scheduler');
 
 const app = express();
 
-// Trust the first proxy (nginx/Traefik in production)
-app.set('trust proxy', 1);
+// Trust proxy hops: Coolify deploys Traefik → nginx → Express (2 hops).
+// Set TRUST_PROXY_HOPS=1 in .env if running without an outer reverse proxy.
+app.set('trust proxy', parseInt(process.env.TRUST_PROXY_HOPS || '2', 10));
 
 // Connect to MongoDB, then start reminder scheduler
 connectDB()
@@ -51,8 +52,18 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+// Google OAuth routes are excluded from all rate limiters — they are one-shot redirects
+// handled by Google's own servers, and blocking them produces a confusing 429 JSON page
+// instead of a browser-visible error.
+const skipGoogleOAuth = (req) => req.originalUrl.startsWith('/api/auth/google');
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipGoogleOAuth,
+});
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, skip: skipGoogleOAuth });
 app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);

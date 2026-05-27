@@ -1,18 +1,25 @@
 import { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
+
+const OAUTH_ERRORS = {
+  google_failed: 'No se pudo iniciar sesión con Google. Por favor intentá de nuevo.',
+  auth_failed: 'Error de autenticación. Por favor intentá de nuevo.',
+}
 
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [form, setForm] = useState({ nickname: '', password: '' })
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const from = location.state?.from?.pathname || '/'
+  const oauthError = searchParams.get('error')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -56,6 +63,11 @@ export default function Login() {
       {/* Form */}
       <div className="flex-1 px-5 pb-8 max-w-md mx-auto w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {oauthError && (
+            <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-xl px-4 py-3 text-sm">
+              {OAUTH_ERRORS[oauthError] ?? 'Error con Google. Por favor intentá de nuevo.'}
+            </div>
+          )}
           {error && (
             <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-xl px-4 py-3 text-sm">
               {error}

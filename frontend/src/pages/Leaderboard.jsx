@@ -119,14 +119,14 @@ export default function Leaderboard() {
         )}
 
         {/* Full table */}
-        <div className="card">
+        <div className="bg-brand-surface rounded-2xl border border-brand-border overflow-hidden">
           {/* Header */}
-          <div className="flex items-center text-xs text-brand-muted font-semibold pb-2 border-b border-brand-border mb-1">
+          <div className="flex items-center text-xs text-brand-muted font-semibold px-4 py-2 border-b border-brand-border">
             <span className="w-10 text-center">#</span>
             <span className="flex-1 pl-2">Jugador</span>
-            <span className="w-12 text-center">Part.</span>
-            <span className="w-14 text-center">Torneo</span>
-            <span className="w-14 text-right">Total</span>
+            <span className="w-8 text-center">P.</span>
+            <span className="w-8 text-center">T.</span>
+            <span className="w-12 text-right">Total</span>
           </div>
 
           {entries.map((entry) => {
@@ -137,7 +137,7 @@ export default function Leaderboard() {
               <button
                 key={entry.user._id}
                 onClick={() => navigate(`/users/${entry.user._id}`)}
-                className={`flex items-center py-2.5 border-b border-brand-border last:border-0 w-full text-left active:bg-brand-elevated transition-colors ${isMe ? 'bg-brand-primary/5 -mx-4 px-4' : ''}`}
+                className={`flex items-center py-2.5 px-4 border-b border-brand-border last:border-0 w-full text-left transition-colors ${isMe ? 'bg-brand-primary/5' : 'active:bg-brand-elevated'}`}
               >
                 <div className="w-10 flex justify-center">
                   <RankBadge rank={entry.rank} />
@@ -167,15 +167,15 @@ export default function Leaderboard() {
                   </div>
                   <p className="text-xs text-brand-muted truncate">{entry.user.name}</p>
                 </div>
-                <span className="w-12 text-center text-sm text-brand-muted">{entry.matchPoints}</span>
-                <span className="w-14 text-center text-sm text-brand-muted">{entry.tournamentPoints}</span>
-                <span className="w-14 text-right font-bold text-brand-text">{entry.totalPoints}</span>
+                <span className="w-8 text-center text-sm text-brand-muted">{entry.matchPoints}</span>
+                <span className="w-8 text-center text-sm text-brand-muted">{entry.tournamentPoints}</span>
+                <span className="w-12 text-right font-bold text-brand-text">{entry.totalPoints}</span>
               </button>
             )
           })}
 
           {entries.length === 0 && (
-            <p className="text-brand-muted text-sm text-center py-6">Sin puntajes aun</p>
+            <p className="text-brand-muted text-sm text-center px-4 py-6">Sin puntajes aun</p>
           )}
         </div>
       </div>
