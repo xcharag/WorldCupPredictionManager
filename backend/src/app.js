@@ -20,6 +20,7 @@ const adminRoutes = require('./routes/admin');
 const profileRoutes = require('./routes/profile');
 const imageRoutes = require('./routes/images');
 const userRoutes = require('./routes/users');
+const changelogRoutes = require('./routes/changelog');
 const { startScheduler } = require('./services/scheduler');
 
 const app = express();
@@ -83,6 +84,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/changelog', changelogRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));

@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Camera, Check, LogOut, X } from 'lucide-react'
+import { Bell, BellOff, Camera, Check, LogOut, Moon, Smartphone, Sun, Users, UserPlus, X } from 'lucide-react'
+import { isPushSupported, isIOSBrowser, subscribeToPush, unsubscribeFromPush, getCurrentSubscription } from '../utils/push'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
 import SearchableSelect from '../components/SearchableSelect'
@@ -11,6 +13,7 @@ import MinioImage from '../components/MinioImage'
 
 export default function Profile() {
   const { user, setUser, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const fileRef = useRef(null)
 
@@ -38,10 +41,98 @@ export default function Profile() {
   const [notifDirty, setNotifDirty] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
 
+  // Push notifications state
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushSupported, setPushSupported] = useState(false)
+  const [pushToggling, setPushToggling] = useState(false)
+  const [pushVapidKey, setPushVapidKey] = useState('')
+  const [iosOnly, setIosOnly] = useState(false)
+  const [pushTimings, setPushTimings] = useState(['1h'])
+  const [pushTimingsSaving, setPushTimingsSaving] = useState(false)
+
+  // Privacy settings
+  const [acceptGroupInvites, setAcceptGroupInvites] = useState(true)
+  const [invitesSaving, setInvitesSaving] = useState(false)
+
   useEffect(() => {
     api.get('/teams').then((res) => setTeams(res.data || []))
     api.get('/profile/notifications').then((res) => setNotifPrefs(res.data.notificationPreferences || []))
+    // Check push support and current subscription status
+    if (isPushSupported()) {
+      if (isIOSBrowser()) {
+        setIosOnly(true)
+        setPushSupported(true)
+      } else {
+        setPushSupported(true)
+        Promise.all([
+          api.get('/profile/push-status'),
+          getCurrentSubscription(),
+        ]).then(([statusRes, sub]) => {
+          setPushVapidKey(statusRes.data.vapidPublicKey || '')
+          setPushEnabled(statusRes.data.enabled && !!sub)
+          setPushTimings(statusRes.data.reminderPreferences || ['1h'])
+          setAcceptGroupInvites(statusRes.data.acceptGroupInvites !== false)
+        }).catch(() => {})
+      }
+    }
   }, [])
+
+  const handleTogglePush = async () => {
+    if (!pushSupported || iosOnly || pushToggling) return
+    setPushToggling(true)
+    try {
+      if (pushEnabled) {
+        const endpoint = await unsubscribeFromPush()
+        await api.delete('/profile/push-subscribe', { data: { endpoint } })
+        setPushEnabled(false)
+        addToast('Notificaciones desactivadas')
+      } else {
+        const perm = await Notification.requestPermission()
+        if (perm !== 'granted') {
+          addToast('Permiso de notificaciones denegado', 'error')
+          return
+        }
+        const sub = await subscribeToPush(pushVapidKey)
+        await api.post('/profile/push-subscribe', { subscription: sub })
+        setPushEnabled(true)
+        addToast('Notificaciones activadas ✓')
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Error al cambiar notificaciones', 'error')
+    } finally {
+      setPushToggling(false)
+    }
+  }
+
+  const togglePushTiming = async (key) => {
+    const next = pushTimings.includes(key)
+      ? pushTimings.filter(k => k !== key)
+      : [...pushTimings, key]
+    setPushTimings(next)
+    setPushTimingsSaving(true)
+    try {
+      await api.patch('/profile/push-reminders', { reminderPreferences: next })
+    } catch {
+      addToast('Error al guardar', 'error')
+    } finally {
+      setPushTimingsSaving(false)
+    }
+  }
+
+  const handleToggleGroupInvites = async () => {
+    const next = !acceptGroupInvites
+    setAcceptGroupInvites(next)
+    setInvitesSaving(true)
+    try {
+      await api.patch('/profile/accept-invites', { acceptGroupInvites: next })
+      addToast(next ? 'Invitaciones activadas' : 'Invitaciones desactivadas', 'success')
+    } catch {
+      setAcceptGroupInvites(!next) // rollback
+      addToast('Error al guardar', 'error')
+    } finally {
+      setInvitesSaving(false)
+    }
+  }
 
   const showToast = (message, type = 'success') => addToast(message, type)
 
@@ -365,6 +456,165 @@ export default function Profile() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* ── Notificaciones push ────────────────────── */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-1">
+            <Smartphone size={15} className="text-brand-primary" />
+            <p className="font-semibold text-sm">Notificaciones push</p>
+          </div>
+
+          {!pushSupported ? (
+            <div className="flex items-start gap-3 bg-brand-elevated border border-brand-border rounded-xl px-3 py-3 mt-3">
+              <BellOff size={16} className="text-brand-muted flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Las notificaciones push no están disponibles en esta conexión. Accedé a la app desde su URL oficial (HTTPS) para activarlas.
+              </p>
+            </div>
+          ) : iosOnly ? (
+            <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-3 mt-3">
+              <Bell size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-300">
+                En iPhone/iPad las notificaciones push solo funcionan cuando la app está{' '}
+                <strong>instalada en la pantalla de inicio</strong>. Agregala desde el botón «Instalar app» en Inicio y luego activá las notificaciones aquí.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-brand-muted mb-4">
+                Activá las notificaciones para recibir recordatorios diarios (11:00 y 17:30) y avisos antes de cada partido sin predecir.
+              </p>
+              <button
+                onClick={handleTogglePush}
+                disabled={pushToggling || !pushVapidKey}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors disabled:opacity-50
+                  ${pushEnabled
+                    ? 'border-brand-primary bg-brand-primary/10 text-brand-text'
+                    : 'border-brand-border bg-transparent text-brand-muted active:bg-brand-elevated'}`}
+              >
+                <div className="flex items-center gap-2">
+                  {pushEnabled
+                    ? <Bell size={16} className="text-brand-primary" />
+                    : <BellOff size={16} className="text-brand-muted" />}
+                  <span className="text-sm">
+                    {pushEnabled ? 'Notificaciones activadas' : 'Activar notificaciones'}
+                  </span>
+                </div>
+                {pushToggling
+                  ? <div className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                  : (
+                    <div className={`w-11 h-6 rounded-full transition-colors relative ${
+                      pushEnabled ? 'bg-brand-primary' : 'bg-brand-border'
+                    }`}>
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        pushEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </div>
+                  )}
+              </button>
+
+              {/* Timing options — only shown when push is active */}
+              {pushEnabled && (
+                <div className="mt-4 space-y-3">
+                  {/* Daily reminders — always implicit */}
+                  <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-brand-elevated border border-brand-border">
+                    <Bell size={14} className="text-brand-primary flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-brand-muted leading-relaxed">
+                      Recordatorios diarios a las <strong className="text-brand-text">11:00</strong> y{' '}
+                      <strong className="text-brand-text">17:30</strong> (UTC) si tenés predicciones pendientes.
+                      <span className="ml-1 text-brand-primary font-medium">Siempre activos.</span>
+                    </p>
+                  </div>
+
+                  {/* Configurable pre-match timings */}
+                  <p className="text-xs text-brand-muted flex items-center gap-1.5 pt-1">
+                    Recordatorios antes del partido
+                    {pushTimingsSaving && <span className="w-3 h-3 border border-brand-muted border-t-transparent rounded-full animate-spin inline-block" />}
+                  </p>
+                  {NOTIF_OPTIONS.map(({ key, label }) => {
+                    const active = pushTimings.includes(key)
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => togglePushTiming(key)}
+                        disabled={pushTimingsSaving}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl border transition-colors disabled:opacity-60
+                          ${active
+                            ? 'border-brand-primary bg-brand-primary/10 text-brand-text'
+                            : 'border-brand-border bg-transparent text-brand-muted active:bg-brand-elevated'}`}
+                      >
+                        <span className="text-sm">{label}</span>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0
+                          ${active ? 'border-brand-primary bg-brand-primary' : 'border-brand-border'}`}>
+                          {active && <Check size={11} className="text-white" strokeWidth={3} />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ── Privacidad / Grupos ────────────────── */}
+        <div className="card">
+          <div className="flex items-center gap-2 mb-1">
+            <Users size={15} className="text-brand-primary" />
+            <p className="font-semibold text-sm">Privacidad de grupos</p>
+          </div>
+          <p className="text-xs text-brand-muted mb-4">
+            Si lo desactivás, otros usuarios no podrán invitarte a sus grupos.
+          </p>
+          <button
+            onClick={handleToggleGroupInvites}
+            disabled={invitesSaving}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors disabled:opacity-50
+              ${acceptGroupInvites
+                ? 'border-brand-primary bg-brand-primary/10 text-brand-text'
+                : 'border-brand-border bg-transparent text-brand-muted active:bg-brand-elevated'}`}
+          >
+            <div className="flex items-center gap-2">
+              <UserPlus size={16} className={acceptGroupInvites ? 'text-brand-primary' : 'text-brand-muted'} />
+              <span className="text-sm">
+                {acceptGroupInvites ? 'Aceptar invitaciones de grupos' : 'Invitaciones de grupos desactivadas'}
+              </span>
+            </div>
+            {invitesSaving
+              ? <div className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+              : (
+                <div className={`w-11 h-6 rounded-full transition-colors relative ${
+                  acceptGroupInvites ? 'bg-brand-primary' : 'bg-brand-border'
+                }`}>
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                    acceptGroupInvites ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </div>
+              )}
+          </button>
+        </div>
+
+        {/* ── Apariencia ─────────────────────────────── */}
+        <div className="card">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between py-3 text-sm"
+          >
+            <div className="flex items-center gap-2">
+              {theme === 'dark'
+                ? <Moon size={16} className="text-brand-primary" />
+                : <Sun size={16} className="text-brand-primary" />}
+              <span>{theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}</span>
+            </div>
+            <div className={`w-11 h-6 rounded-full transition-colors relative ${
+              theme === 'dark' ? 'bg-brand-primary' : 'bg-brand-border'
+            }`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </div>
+          </button>
         </div>
 
         {/* ── Cerrar sesión ──────────────────────────── */}

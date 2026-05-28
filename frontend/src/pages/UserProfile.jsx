@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
+import { X } from 'lucide-react'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
 import MinioImage from '../components/MinioImage'
@@ -98,6 +99,7 @@ export default function UserProfile() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showPredictions, setShowPredictions] = useState(false)
+  const [avatarOpen, setAvatarOpen] = useState(false)
 
   useEffect(() => {
     api.get(`/users/${userId}`)
@@ -142,7 +144,10 @@ export default function UserProfile() {
         {/* User card */}
         <div className="card flex items-center gap-4">
           {/* Avatar */}
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-brand-elevated flex items-center justify-center flex-shrink-0 border-2 border-brand-border">
+          <div
+            className={`w-20 h-20 rounded-full overflow-hidden bg-brand-elevated flex items-center justify-center flex-shrink-0 border-2 border-brand-border ${user.avatar ? 'cursor-zoom-in active:scale-95 transition-transform' : ''}`}
+            onClick={() => user.avatar && setAvatarOpen(true)}
+          >
             {user.avatar ? (
               <MinioImage src={user.avatar} alt={user.nickname} className="w-full h-full object-cover"
                 fallback={<span className="text-2xl font-bold text-brand-primary">{initials}</span>}
@@ -198,6 +203,33 @@ export default function UserProfile() {
           </div>
         )}
       </div>
+
+      {/* Avatar lightbox */}
+      {avatarOpen && user.avatar && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+          onClick={() => setAvatarOpen(false)}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+            onClick={() => setAvatarOpen(false)}
+            aria-label="Cerrar"
+          >
+            <X size={20} />
+          </button>
+          <div
+            className="w-72 h-72 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <MinioImage
+              src={user.avatar}
+              alt={user.nickname}
+              className="w-full h-full object-cover"
+              fallback={<span className="w-full h-full flex items-center justify-center text-6xl font-bold text-brand-primary bg-brand-elevated">{initials}</span>}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

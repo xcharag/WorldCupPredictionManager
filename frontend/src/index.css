@@ -150,6 +150,12 @@ html.dark {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Scrollbar thin custom */
+.scrollbar-thin { scrollbar-width: thin; scrollbar-color: rgb(var(--brand-border)) transparent; }
+.scrollbar-thin::-webkit-scrollbar { width: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background-color: rgb(var(--brand-border)); border-radius: 9999px; }
+
 /* Smooth scroll */
 html { scroll-behavior: smooth; }
 
