@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
@@ -69,6 +70,13 @@ export default function Home() {
   const [isIOS, setIsIOS] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
   const [showIOSModal, setShowIOSModal] = useState(false)
+
+  // Body scroll lock when any modal is open
+  useEffect(() => {
+    const anyModalOpen = showChangelog || showIOSModal
+    document.body.style.overflow = anyModalOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [showChangelog, showIOSModal])
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
@@ -360,7 +368,7 @@ export default function Home() {
       </div>
 
       {/* iOS install instructions modal */}
-      {showIOSModal && (
+      {showIOSModal && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => setShowIOSModal(false)}
@@ -393,11 +401,12 @@ export default function Home() {
               ⚠ Esta función solo está disponible en <strong className="text-brand-text">Safari</strong>. Si usás Chrome u otro navegador en iOS, abrí la página en Safari primero.
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Novedades modal */}
-      {showChangelog && (
+      {showChangelog && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => setShowChangelog(false)}
@@ -413,7 +422,7 @@ export default function Home() {
                 <Sparkles size={18} className="text-brand-primary" />
                 <p className="font-bold text-brand-text">Novedades</p>
               </div>
-              <button onClick={() => setShowChangelog(false)} className="text-brand-muted active:text-brand-text">
+              <button onClick={() => setShowChangelog(false)} className="text-brand-muted active:text-brand-text" autoFocus>
                 <X size={20} />
               </button>
             </div>
@@ -451,7 +460,8 @@ export default function Home() {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -13,6 +13,13 @@ export function startTour({ onDone } = {}) {
     prevBtnText: '← Atrás',
     doneBtnText: '¡Listo!',
     overlayColor: 'rgba(0,0,0,0.75)',
+    smoothScroll: true,
+    scrollIntoViewOptions: { behavior: 'smooth', block: 'center', inline: 'center' },
+    onHighlightStarted: (element) => {
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+      }
+    },
     popoverClass: 'tour-popover',
     steps: [
       {
