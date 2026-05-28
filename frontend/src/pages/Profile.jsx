@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, BellOff, Camera, Check, LogOut, Smartphone, Users, UserPlus, X } from 'lucide-react'
+import { Bell, BellOff, Camera, Check, LogOut, Moon, Smartphone, Sun, Users, UserPlus, X } from 'lucide-react'
 import { isPushSupported, isIOSBrowser, subscribeToPush, unsubscribeFromPush, getCurrentSubscription } from '../utils/push'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
 import SearchableSelect from '../components/SearchableSelect'
@@ -12,6 +13,7 @@ import MinioImage from '../components/MinioImage'
 
 export default function Profile() {
   const { user, setUser, logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const fileRef = useRef(null)
 
@@ -590,6 +592,28 @@ export default function Profile() {
                   }`} />
                 </div>
               )}
+          </button>
+        </div>
+
+        {/* ── Apariencia ─────────────────────────────── */}
+        <div className="card">
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between py-3 text-sm"
+          >
+            <div className="flex items-center gap-2">
+              {theme === 'dark'
+                ? <Moon size={16} className="text-brand-primary" />
+                : <Sun size={16} className="text-brand-primary" />}
+              <span>{theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}</span>
+            </div>
+            <div className={`w-11 h-6 rounded-full transition-colors relative ${
+              theme === 'dark' ? 'bg-brand-primary' : 'bg-brand-border'
+            }`}>
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </div>
           </button>
         </div>
 

@@ -41,7 +41,18 @@ export default function Home() {
   const [changelog, setChangelog] = useState([])
   const [showChangelog, setShowChangelog] = useState(false)
   const SEEN_KEY = 'novedades_seen_version'
-  const hasUnread = changelog.length > 0 && changelog[0].version !== localStorage.getItem(SEEN_KEY)
+
+  const latestEntry = changelog.reduce((best, entry) => {
+    if (!best) return entry
+    const a = entry.version.split('.').map(Number)
+    const b = best.version.split('.').map(Number)
+    for (let i = 0; i < 3; i++) {
+      if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0) ? entry : best
+    }
+    return best
+  }, null)
+
+  const hasUnread = latestEntry != null && latestEntry.version !== localStorage.getItem(SEEN_KEY)
 
   useEffect(() => {
     api.get('/changelog').then(r => setChangelog(r.data || [])).catch(() => {})
@@ -169,7 +180,7 @@ export default function Home() {
           <button
             onClick={() => {
               setShowChangelog(true)
-              if (changelog[0]) localStorage.setItem(SEEN_KEY, changelog[0].version)
+              if (latestEntry) localStorage.setItem(SEEN_KEY, latestEntry.version)
             }}
             className="w-full flex items-center gap-3 card mb-4 active:bg-brand-elevated transition-colors"
           >
@@ -182,7 +193,7 @@ export default function Home() {
             <div className="flex-1 text-left min-w-0">
               <p className="text-sm font-semibold">Novedades</p>
               <p className="text-xs text-brand-muted truncate">
-                {hasUnread ? `¡Novedad en v${changelog[0].version}!` : `Última actualización: v${changelog[0].version}`}
+                {hasUnread ? `¡Novedad en v${latestEntry.version}!` : `Última actualización: v${latestEntry.version}`}
               </p>
             </div>
             <ChevronRight size={16} className="text-brand-muted flex-shrink-0" />
@@ -388,11 +399,12 @@ export default function Home() {
       {/* Novedades modal */}
       {showChangelog && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={() => setShowChangelog(false)}
         >
           <div
-            className="w-full max-w-md bg-brand-elevated rounded-2xl shadow-xl flex flex-col max-h-[80vh]"
+            className="w-full max-w-md bg-brand-elevated rounded-2xl shadow-xl flex flex-col"
+            style={{ maxHeight: 'min(80vh, 600px)' }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
@@ -407,11 +419,18 @@ export default function Home() {
             </div>
 
             {/* Entries */}
-            <div className="overflow-y-auto px-5 py-4 space-y-5">
-              {changelog.map((entry, idx) => (
+            <div className="overflow-y-auto scrollbar-thin px-5 py-4 space-y-5">
+              {[...changelog].sort((a, b) => {
+                const av = a.version.split('.').map(Number)
+                const bv = b.version.split('.').map(Number)
+                for (let i = 0; i < 3; i++) {
+                  if ((bv[i] ?? 0) !== (av[i] ?? 0)) return (bv[i] ?? 0) - (av[i] ?? 0)
+                }
+                return 0
+              }).map((entry, idx, arr) => (
                 <div key={entry.version}>
                   <div className="flex items-baseline gap-2 mb-2">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${idx === 0 ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted border border-brand-border'}`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${entry.version === latestEntry?.version ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted border border-brand-border'}`}>
                       v{entry.version}
                     </span>
                     <span className="text-xs text-brand-muted">
@@ -427,7 +446,7 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  {idx < changelog.length - 1 && <div className="mt-5 border-t border-brand-border" />}
+                  {idx < arr.length - 1 && <div className="mt-5 border-t border-brand-border" />}
                 </div>
               ))}
             </div>
