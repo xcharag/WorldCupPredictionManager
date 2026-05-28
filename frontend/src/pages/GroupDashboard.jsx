@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
 import { GroupDashboardSkeleton } from '../components/Skeletons'
-import { Swords, Trophy, BarChart3, Users, ChevronRight } from 'lucide-react'
+import { Swords, Trophy, BarChart3, Users, ChevronRight, Pencil, Check, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function GroupDashboard() {
@@ -13,6 +13,9 @@ export default function GroupDashboard() {
   const [group, setGroup] = useState(null)
   const [loading, setLoading] = useState(true)
   const [confirmDialog, setConfirmDialog] = useState(null)
+  const [renaming, setRenaming] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [renameSaving, setRenameSaving] = useState(false)
 
   useEffect(() => {
     api.get(`/groups/${groupId}`)
@@ -24,6 +27,26 @@ export default function GroupDashboard() {
   if (loading) return <GroupDashboardSkeleton />
   if (!group) return null
   const isCreator = group.creator?._id === user?._id
+
+  function startRename() {
+    setNewName(group.name)
+    setRenaming(true)
+  }
+
+  async function saveRename() {
+    const trimmed = newName.trim()
+    if (!trimmed || trimmed === group.name) { setRenaming(false); return }
+    setRenameSaving(true)
+    try {
+      const res = await api.patch(`/groups/${groupId}`, { name: trimmed })
+      setGroup(g => ({ ...g, name: res.data.name }))
+      setRenaming(false)
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al renombrar el grupo')
+    } finally {
+      setRenameSaving(false)
+    }
+  }
 
   function removeMember(memberId) {
     setConfirmDialog({
@@ -76,9 +99,47 @@ export default function GroupDashboard() {
         title={group.name}
         subtitle={`${group.members?.length} miembros`}
         onBack={() => navigate('/groups')}
+        action={isCreator && !renaming && (
+          <button
+            onClick={startRename}
+            className="p-2 rounded-xl text-brand-muted hover:text-brand-text hover:bg-brand-elevated transition-colors"
+            aria-label="Renombrar grupo"
+          >
+            <Pencil size={18} />
+          </button>
+        )}
       />
 
       <div className="px-4 pt-4">
+        {/* Inline rename form */}
+        {renaming && (
+          <div className="card mb-4 flex items-center gap-2">
+            <input
+              autoFocus
+              className="flex-1 min-w-0 bg-brand-elevated rounded-xl px-3 py-2 text-sm text-brand-text border border-brand-border focus:outline-none focus:border-brand-primary"
+              value={newName}
+              maxLength={50}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveRename(); if (e.key === 'Escape') setRenaming(false) }}
+            />
+            <button
+              onClick={saveRename}
+              disabled={renameSaving || !newName.trim()}
+              className="p-2 rounded-xl bg-brand-primary text-white disabled:opacity-40 flex-shrink-0"
+              aria-label="Guardar nombre"
+            >
+              {renameSaving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Check size={16} />}
+            </button>
+            <button
+              onClick={() => setRenaming(false)}
+              className="p-2 rounded-xl bg-brand-elevated text-brand-muted flex-shrink-0"
+              aria-label="Cancelar"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {/* Members preview */}
         <div className="card mb-4">
           <div className="flex items-center gap-2 mb-3">

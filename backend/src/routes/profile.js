@@ -143,4 +143,74 @@ router.put('/notifications', protect, async (req, res) => {
   }
 });
 
+// GET /api/profile/push-status  — returns VAPID public key + whether this user has push enabled
+router.get('/push-status', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select('pushNotificationsEnabled pushSubscriptions pushReminderPreferences');
+    res.json({
+      enabled: user.pushNotificationsEnabled || false,
+      hasSubscriptions: (user.pushSubscriptions || []).length > 0,
+      vapidPublicKey: process.env.VAPID_PUBLIC_KEY || null,
+      reminderPreferences: user.pushReminderPreferences || ['1h'],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PATCH /api/profile/push-reminders  — update which timings trigger push reminders
+router.patch('/push-reminders', protect, async (req, res) => {
+  const VALID = ['24h', '6h', '4h', '1h'];
+  const prefs = (req.body.reminderPreferences || []).filter((v) => VALID.includes(v));
+  try {
+    await User.findByIdAndUpdate(req.user._id, { pushReminderPreferences: prefs });
+    res.json({ ok: true, reminderPreferences: prefs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/profile/push-subscribe  — save a push subscription for this device
+router.post('/push-subscribe', protect, async (req, res) => {
+  const { subscription } = req.body;
+  if (!subscription?.endpoint) return res.status(400).json({ message: 'Suscripción inválida' });
+
+  try {
+    // Add only if endpoint is not already stored (upsert by endpoint)
+    await User.findByIdAndUpdate(req.user._id, {
+      $addToSet: { pushSubscriptions: subscription },
+      pushNotificationsEnabled: true,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DELETE /api/profile/push-subscribe  — remove a push subscription (by endpoint)
+router.delete('/push-subscribe', protect, async (req, res) => {
+  const { endpoint } = req.body;
+  try {
+    const update = endpoint
+      ? { $pull: { pushSubscriptions: { endpoint } } }
+      : { $set: { pushSubscriptions: [] } };
+
+    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true })
+      .select('pushSubscriptions');
+
+    // Disable flag when no subscriptions remain
+    if (!(user.pushSubscriptions || []).length) {
+      await User.findByIdAndUpdate(req.user._id, { pushNotificationsEnabled: false });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

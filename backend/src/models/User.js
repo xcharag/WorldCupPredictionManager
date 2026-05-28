@@ -38,6 +38,14 @@ const userSchema = new mongoose.Schema(
         message: 'Máximo 2 preferencias de notificación permitidas',
       },
     },
+    pushNotificationsEnabled: { type: Boolean, default: false },
+    // Which time-before-kickoff windows should trigger a push reminder (unpredicted matches only)
+    pushReminderPreferences: {
+      type: [{ type: String, enum: ['24h', '6h', '4h', '1h'] }],
+      default: ['1h'],
+    },
+    // Each entry is a full Web Push subscription object { endpoint, expirationTime, keys }
+    pushSubscriptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
   },
   { timestamps: true }
 );

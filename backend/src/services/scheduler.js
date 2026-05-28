@@ -8,6 +8,7 @@ const { sendMatchReminderEmail } = require('./email');
 const fd = require('./footballdata');
 const { calculateMatchPredictions } = require('./scoring');
 const cl = require('./cronLogger');
+const { sendDailyPushReminders, sendMatchStartPushReminders } = require('./pushNotifications');
 
 // How many minutes before/after the exact timing window we check.
 // Cron runs every 5 min, so ±4 min window catches every match.
@@ -186,13 +187,17 @@ async function syncTeamRosters() {
 function startScheduler() {
   // ── Register jobs with the logger ──────────────────────────────────────────
   cl.register('recordatorios',  '*/5 * * * *', 'Envía emails de recordatorio antes de partidos');
+  cl.register('push-partidos',  '*/5 * * * *', 'Push notifications 1h/30min antes de partidos sin predecir');
   cl.register('marcadores',     '* * * * *',   'Sincroniza marcadores en vivo desde football-data.org');
   cl.register('plantillas',     '0 * * * *',   'Actualiza plantillas de equipos desde football-data.org');
   cl.register('limpieza-logs',  '30 2 * * *',  'Elimina logs de MinIO con más de 7 días');
+  cl.register('push-manana',    '0 11 * * *',  'Notificaciones push diarias (11:00 UTC)');
+  cl.register('push-tarde',     '30 17 * * *', 'Notificaciones push diarias (17:30 UTC)');
 
-  // ── Match reminders (every 5 min) ──────────────────────────────────────────
+  // ── Match reminders + push pre-match (every 5 min) ─────────────────────────
   cron.schedule('*/5 * * * *', cl.wrap('recordatorios', sendPendingReminders));
-  console.log('[Scheduler] Match reminder cron started (every 5 min)');
+  cron.schedule('*/5 * * * *', cl.wrap('push-partidos', sendMatchStartPushReminders));
+  console.log('[Scheduler] Match reminder crons started (every 5 min)');
 
   // ── Live score updates (every 1 min) ───────────────────────────────────────
   cron.schedule('* * * * *', cl.wrap('marcadores', syncLiveMatches));
@@ -208,6 +213,12 @@ function startScheduler() {
     return `${n} archivos eliminados`;
   }));
   console.log('[Scheduler] Log cleanup cron started (daily 02:30 UTC)');
+
+  // ── Daily push notifications (11:00 and 17:30 UTC) ─────────────────────────
+  // Adjust the UTC offset for your target timezone if needed.
+  cron.schedule('0 11 * * *', cl.wrap('push-manana', sendDailyPushReminders));
+  cron.schedule('30 17 * * *', cl.wrap('push-tarde', sendDailyPushReminders));
+  console.log('[Scheduler] Daily push notification crons started (11:00 and 17:30 UTC)');
 }
 
 module.exports = { startScheduler };

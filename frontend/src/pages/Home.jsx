@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Users, Swords, Star, Moon, Sun, Clock, ChevronRight } from 'lucide-react'
+import { Trophy, Users, Swords, Star, Moon, Sun, Clock, ChevronRight, Download, HelpCircle, X, Share, Sparkles } from 'lucide-react'
 import api from '../services/api'
-import { driver } from 'driver.js'
-import 'driver.js/dist/driver.css'
+import { startTour } from '../utils/tour'
 
 const TOURNAMENT_FIELDS = ['champion', 'runnerUp', 'topScorer', 'topAssister', 'mostYellowCards', 'mostRedCards']
 
@@ -38,135 +37,50 @@ export default function Home() {
   const [countdown, setCountdown] = useState(null)
   const [pendingLoading, setPendingLoading] = useState(true)
 
-  // Onboarding tour — shown once per device
+  // Changelog / Novedades
+  const [changelog, setChangelog] = useState([])
+  const [showChangelog, setShowChangelog] = useState(false)
+  const SEEN_KEY = 'novedades_seen_version'
+  const hasUnread = changelog.length > 0 && changelog[0].version !== localStorage.getItem(SEEN_KEY)
+
+  useEffect(() => {
+    api.get('/changelog').then(r => setChangelog(r.data || [])).catch(() => {})
+  }, [])
+
   useEffect(() => {
     if (localStorage.getItem('tour_done')) return
-    const t = setTimeout(() => {
-      const driverObj = driver({
-        showProgress: true,
-        progressText: '{{current}} de {{total}}',
-        nextBtnText: 'Siguiente →',
-        prevBtnText: '← Atrás',
-        doneBtnText: '¡Listo!',
-        overlayColor: 'rgba(0,0,0,0.75)',
-        popoverClass: 'tour-popover',
-        steps: [
-          {
-            popover: {
-              title: '¡Bienvenido al Concurso del Mundial 2026! 🏆',
-              description:
-                'Este es un juego de pronósticos. Predecís los resultados de los 104 partidos del Mundial, elegís al campeón, al goleador y más — y competís con amigos para ver quién sabe más de fútbol.',
-              side: 'over',
-              align: 'center',
-            },
-          },
-          {
-            element: '#tour-partidos',
-            popover: {
-              title: '⚽ Partidos',
-              description:
-                'Aquí predecís el resultado de cada partido <strong>antes de que empiece</strong>. Podés ganar hasta 5 puntos por partido si acertás el marcador exacto.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#tour-grupos',
-            popover: {
-              title: '👥 Mis Grupos',
-              description:
-                'Creá un grupo privado o unite al de tus amigos para tener una tabla de posiciones propia y competir entre ustedes.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#tour-ranking',
-            popover: {
-              title: '🏅 Ranking',
-              description:
-                'Seguí tu posición en el ranking global y mirá cómo van los demás participantes a medida que avanzan los partidos.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#tour-torneo',
-            popover: {
-              title: '⭐ Torneo',
-              description:
-                'Antes de que arranque el torneo podés predecir el campeón, el goleador, el asistidor y más. ¡Estos pronósticos valen muchos puntos!',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#tour-scoring',
-            popover: {
-              title: '📊 Sistema de puntuación',
-              description:
-                'Repasá cómo se puntúa. Un pronóstico perfecto (resultado exacto) vale 5 puntos. Los pronósticos del torneo pueden darte hasta 50 puntos extra.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#nav-partidos',
-            popover: {
-              title: '⚽ Pestaña Predicciones',
-              description:
-                'Desde acá accedés a todos los partidos del torneo para hacer y ver tus pronósticos.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#nav-grupos',
-            popover: {
-              title: '👥 Pestaña Grupos',
-              description:
-                'Acá creás grupos privados o te unís al de tus amigos con un código de invitación.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#nav-inicio',
-            popover: {
-              title: '🏠 Pestaña Inicio',
-              description:
-                'Tu pantalla principal: resumen de pendientes, accesos rápidos y el sistema de puntuación.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#nav-ranking',
-            popover: {
-              title: '🏅 Pestaña Ranking',
-              description:
-                'La tabla de posiciones global. Ves tu posición y la de todos los participantes.',
-              side: 'top',
-              align: 'center',
-            },
-          },
-          {
-            element: '#nav-perfil',
-            popover: {
-              title: '👤 Pestaña Perfil',
-              description:
-                'Tu perfil: nombre, avatar, cambio de contraseña y estadísticas personales. ¡Ya sabés todo, a jugar!',
-              side: 'top',
-              align: 'center',
-            },
-          },
-        ],
-        onDestroyed: () => localStorage.setItem('tour_done', '1'),
-      })
-      driverObj.drive()
-    }, 600)
+    const t = setTimeout(() => startTour(), 600)
     return () => clearTimeout(t)
   }, [])
+
+  // PWA install prompt
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [isIOS, setIsIOS] = useState(false)
+  const [isInstalled, setIsInstalled] = useState(false)
+  const [showIOSModal, setShowIOSModal] = useState(false)
+
+  useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      setIsInstalled(true)
+      return
+    }
+    const ua = navigator.userAgent
+    if (/iphone|ipad|ipod/i.test(ua)) {
+      setIsIOS(true)
+      return
+    }
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const handleInstall = async () => {
+    if (isIOS) { setShowIOSModal(true); return }
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true) }
+  }
 
   useEffect(() => {
     const now = Date.now()
@@ -212,19 +126,19 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-brand-bg" />
         <div className="absolute inset-x-0 bottom-0 px-4 pb-3 flex items-end justify-between">
           <div>
-            <p className="text-white/60 text-[10px] uppercase tracking-widest font-bold">Bienvenido</p>
-            <p className="text-white font-extrabold text-xl leading-tight">@{user?.nickname}</p>
+            <p className="text-black/60 dark:text-white/60 text-[10px] uppercase tracking-widest font-bold">Bienvenido</p>
+            <p className="text-black dark:text-white font-extrabold text-xl leading-tight">@{user?.nickname}</p>
           </div>
           <div className="flex items-center gap-3 pb-0.5">
             <button
               onClick={toggleTheme}
-              className="text-white/60 active:text-white"
+              className="text-black/60 dark:text-white/60 active:text-black dark:active:text-white"
               aria-label="Cambiar tema"
             >
               {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
             </button>
-            <span className="text-white/30">·</span>
-            <button onClick={logout} className="text-white/60 text-xs active:text-white">
+            <span className="text-black/30 dark:text-white/30">·</span>
+            <button onClick={logout} className="text-black/60 dark:text-white/60 text-xs active:text-black dark:active:text-white">
               Salir
             </button>
           </div>
@@ -236,7 +150,7 @@ export default function Home() {
         <div className="flex items-center gap-3 pt-4 pb-3">
           <img src="/logo-worldcup-medium.png" alt="World Cup Trophy" className="w-12 h-12 object-contain drop-shadow" />
           <div>
-            <h1 className="font-extrabold text-white tracking-tight leading-tight text-base uppercase">FIFA World Cup 2026</h1>
+            <h1 className="font-extrabold text-black dark:text-white tracking-tight leading-tight text-base uppercase">FIFA World Cup 2026</h1>
             <p className="text-brand-accent text-[11px] font-bold uppercase tracking-widest">Demostra tu futbol</p>
           </div>
         </div>
@@ -248,6 +162,31 @@ export default function Home() {
               📧 Por favor, verifica tu correo electrónico para desbloquear todas las funciones. Revisa tu bandeja de entrada y/o Spam.
             </p>
           </div>
+        )}
+
+        {/* Novedades */}
+        {changelog.length > 0 && (
+          <button
+            onClick={() => {
+              setShowChangelog(true)
+              if (changelog[0]) localStorage.setItem(SEEN_KEY, changelog[0].version)
+            }}
+            className="w-full flex items-center gap-3 card mb-4 active:bg-brand-elevated transition-colors"
+          >
+            <div className="w-9 h-9 rounded-xl bg-brand-primary/10 flex items-center justify-center flex-shrink-0 relative">
+              <Sparkles size={18} className="text-brand-primary" />
+              {hasUnread && (
+                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-brand-accent border-2 border-brand-bg" />
+              )}
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-semibold">Novedades</p>
+              <p className="text-xs text-brand-muted truncate">
+                {hasUnread ? `¡Novedad en v${changelog[0].version}!` : `Última actualización: v${changelog[0].version}`}
+              </p>
+            </div>
+            <ChevronRight size={16} className="text-brand-muted flex-shrink-0" />
+          </button>
         )}
 
         {/* Pending */}
@@ -375,7 +314,126 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Install + Tutorial */}
+        <div id="tour-install" className="card mb-6 flex flex-col gap-3">
+          {!isInstalled && (isIOS || installPrompt) && (
+            <button
+              onClick={handleInstall}
+              className="flex items-center gap-3 w-full rounded-xl px-4 py-3 bg-brand-accent/10 border border-brand-accent/30 active:bg-brand-accent/20 text-left"
+            >
+              <div className="w-9 h-9 rounded-lg bg-brand-accent/20 flex items-center justify-center flex-shrink-0">
+                <Download size={18} className="text-brand-accent" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-brand-text">Instalar app</p>
+                <p className="text-xs text-brand-muted">Agregala a tu pantalla de inicio</p>
+              </div>
+              <ChevronRight size={16} className="text-brand-accent flex-shrink-0" />
+            </button>
+          )}
+          <button
+            onClick={() => startTour()}
+            className="flex items-center gap-3 w-full rounded-xl px-4 py-3 bg-brand-elevated border border-brand-border active:bg-brand-border text-left"
+          >
+            <div className="w-9 h-9 rounded-lg bg-brand-border flex items-center justify-center flex-shrink-0">
+              <HelpCircle size={18} className="text-brand-muted" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-brand-text">Ver tutorial</p>
+              <p className="text-xs text-brand-muted">Repasá cómo funciona la app</p>
+            </div>
+            <ChevronRight size={16} className="text-brand-muted flex-shrink-0" />
+          </button>
+        </div>
       </div>
+
+      {/* iOS install instructions modal */}
+      {showIOSModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setShowIOSModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-brand-elevated rounded-2xl p-5 pb-8 shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-bold text-brand-text text-base">Instalar en iPhone / iPad</p>
+              <button onClick={() => setShowIOSModal(false)} className="text-brand-muted active:text-brand-text">
+                <X size={20} />
+              </button>
+            </div>
+            <ol className="space-y-3 text-sm text-brand-muted">
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-brand-accent/20 text-brand-accent font-bold flex items-center justify-center flex-shrink-0 text-xs">1</span>
+                <span>Tocá el botón <strong className="text-brand-text">Compartir</strong> <Share size={14} className="inline mb-0.5" /> en la barra inferior de Safari.</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-brand-accent/20 text-brand-accent font-bold flex items-center justify-center flex-shrink-0 text-xs">2</span>
+                <span>Desplazate hacia abajo en el menú y tocá <strong className="text-brand-text">«Agregar a inicio»</strong>.</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-full bg-brand-accent/20 text-brand-accent font-bold flex items-center justify-center flex-shrink-0 text-xs">3</span>
+                <span>Confirmá tocando <strong className="text-brand-text">Agregar</strong> en la esquina superior derecha.</span>
+              </li>
+            </ol>
+            <p className="text-xs text-brand-muted mt-4">
+              ⚠ Esta función solo está disponible en <strong className="text-brand-text">Safari</strong>. Si usás Chrome u otro navegador en iOS, abrí la página en Safari primero.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Novedades modal */}
+      {showChangelog && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setShowChangelog(false)}
+        >
+          <div
+            className="w-full max-w-md bg-brand-elevated rounded-2xl shadow-xl flex flex-col max-h-[80vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-brand-border flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles size={18} className="text-brand-primary" />
+                <p className="font-bold text-brand-text">Novedades</p>
+              </div>
+              <button onClick={() => setShowChangelog(false)} className="text-brand-muted active:text-brand-text">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Entries */}
+            <div className="overflow-y-auto px-5 py-4 space-y-5">
+              {changelog.map((entry, idx) => (
+                <div key={entry.version}>
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${idx === 0 ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted border border-brand-border'}`}>
+                      v{entry.version}
+                    </span>
+                    <span className="text-xs text-brand-muted">
+                      {new Date(entry.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <p className="font-semibold text-sm text-brand-text mb-2">{entry.title}</p>
+                  <ul className="space-y-1.5">
+                    {entry.items.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-brand-muted">
+                        <span className="text-brand-primary mt-0.5 flex-shrink-0">•</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {idx < changelog.length - 1 && <div className="mt-5 border-t border-brand-border" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
