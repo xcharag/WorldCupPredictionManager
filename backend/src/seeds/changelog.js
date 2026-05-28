@@ -46,6 +46,8 @@ const ENTRIES = [
       'Tour interactivo para nuevos usuarios',
       'Perfil de otros usuarios con historial de predicciones',
       'Zoom en fotos de perfil',
+      'Marcadores en vivo actualizados automáticamente durante los partidos',
+      'Predicciones para la fase eliminatoria desbloqueadas al avanzar el torneo',
     ],
   },
   {
@@ -58,6 +60,21 @@ const ENTRIES = [
       'Configurá los avisos previos al partido por canal: email, push o ambos',
       'Los creadores de grupo ahora pueden renombrar el grupo',
       'Sección "Novedades" para estar al tanto de las últimas actualizaciones',
+      'Recuperá tu contraseña por email desde la pantalla de inicio de sesión',
+      'Filtrá los partidos por jornada',
+      'Inicio de sesión mejorado desde aplicaciones como Instagram o TikTok',
+    ],
+  },
+  {
+    version: '1.4.0',
+    date: new Date('2026-05-28'),
+    title: 'Grupos privados y solicitudes de ingreso',
+    items: [
+      'Grupos privados: elegí si cualquiera puede unirse con el link o solo por solicitud aprobada',
+      'Los creadores pueden aprobar o rechazar solicitudes de ingreso al grupo',
+      'Agregá una descripción y un link de WhatsApp a tu grupo',
+      'Mayor control sobre notificaciones push por tipo de aviso',
+      'Mejoras de estabilidad en la sincronización de marcadores en vivo',
     ],
   },
 ];
