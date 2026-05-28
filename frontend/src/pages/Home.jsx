@@ -88,7 +88,12 @@ export default function Home() {
       setIsIOS(true)
       return
     }
-    const handler = (e) => { e.preventDefault(); setInstallPrompt(e) }
+    // Event may have fired before React mounted — pick it up from the global
+    if (window.__pwaInstallPrompt) {
+      setInstallPrompt(window.__pwaInstallPrompt)
+      return
+    }
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); window.__pwaInstallPrompt = e }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
@@ -98,7 +103,7 @@ export default function Home() {
     if (!installPrompt) return
     installPrompt.prompt()
     const { outcome } = await installPrompt.userChoice
-    if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true) }
+    if (outcome === 'accepted') { setInstallPrompt(null); setIsInstalled(true); window.__pwaInstallPrompt = null }
   }
 
   useEffect(() => {
