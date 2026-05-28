@@ -46,6 +46,8 @@ const userSchema = new mongoose.Schema(
     },
     // Each entry is a full Web Push subscription object { endpoint, expirationTime, keys }
     pushSubscriptions: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    // Privacy: whether other users (group creators) can send group invites to this user
+    acceptGroupInvites: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

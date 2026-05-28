@@ -147,12 +147,13 @@ router.put('/notifications', protect, async (req, res) => {
 router.get('/push-status', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .select('pushNotificationsEnabled pushSubscriptions pushReminderPreferences');
+      .select('pushNotificationsEnabled pushSubscriptions pushReminderPreferences acceptGroupInvites');
     res.json({
       enabled: user.pushNotificationsEnabled || false,
       hasSubscriptions: (user.pushSubscriptions || []).length > 0,
       vapidPublicKey: process.env.VAPID_PUBLIC_KEY || null,
       reminderPreferences: user.pushReminderPreferences || ['1h'],
+      acceptGroupInvites: user.acceptGroupInvites !== false, // default true
     });
   } catch (err) {
     console.error(err);
@@ -207,6 +208,21 @@ router.delete('/push-subscribe', protect, async (req, res) => {
       await User.findByIdAndUpdate(req.user._id, { pushNotificationsEnabled: false });
     }
     res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// PATCH /api/profile/accept-invites  — toggle acceptGroupInvites preference
+router.patch('/accept-invites', protect, async (req, res) => {
+  const { acceptGroupInvites } = req.body;
+  if (typeof acceptGroupInvites !== 'boolean') {
+    return res.status(400).json({ message: 'acceptGroupInvites debe ser un booleano' });
+  }
+  try {
+    await User.findByIdAndUpdate(req.user._id, { acceptGroupInvites });
+    res.json({ ok: true, acceptGroupInvites });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
