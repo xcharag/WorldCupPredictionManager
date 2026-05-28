@@ -1,10 +1,11 @@
 ﻿import { useState, useEffect } from 'react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { GroupListSkeleton } from '../components/Skeletons'
 import {
   Plus, Users, ChevronRight, Link as LinkIcon, UserPlus, Share2,
-  Globe, Bell, X, Check, MessageCircle,
+  Globe, Bell, X, Check, MessageCircle, QrCode,
 } from 'lucide-react'
 import { useToast, ToastContainer } from '../components/Toast'
 
@@ -23,6 +24,8 @@ export default function Groups() {
   const [inviting, setInviting] = useState(false)
   const [respondingInvite, setRespondingInvite] = useState(null)
   const [requestingJoin, setRequestingJoin] = useState(null)
+  const [qrData, setQrData] = useState(null)     // { link, groupName } | null
+  const [loadingQr, setLoadingQr] = useState(null) // groupId | null
   const { toasts, addToast, removeToast } = useToast()
   const navigate = useNavigate()
 
@@ -89,6 +92,18 @@ export default function Groups() {
       addToast(copied ? 'Enlace copiado' : 'No se pudo copiar el enlace', copied ? 'success' : 'error')
     } catch {
       addToast('No se pudo copiar el enlace', 'error')
+    }
+  }
+
+  const showGroupQr = async (groupId, groupName) => {
+    setLoadingQr(groupId)
+    try {
+      const { data } = await api.get(`/groups/${groupId}/invite-link`)
+      setQrData({ link: data.link, groupName, groupId })
+    } catch {
+      addToast('No se pudo generar el QR', 'error')
+    } finally {
+      setLoadingQr(null)
     }
   }
 
@@ -168,6 +183,7 @@ export default function Groups() {
   if (loading) return <GroupListSkeleton />
 
   return (
+    <>
     <div className="page max-w-md mx-auto px-4 pt-6">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
@@ -304,16 +320,17 @@ export default function Groups() {
                   {/* Quick actions */}
                   <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-brand-border">
                     <button
-                      onClick={() => copyInviteLink(group._id)}
-                      className="flex items-center gap-1.5 text-xs text-brand-muted active:text-brand-text px-3 py-1.5 bg-brand-elevated rounded-lg"
-                    >
-                      <LinkIcon size={13} /> Copiar enlace
-                    </button>
-                    <button
                       onClick={() => shareInviteLink(group._id, group.name)}
                       className="flex items-center gap-1.5 text-xs text-brand-muted active:text-brand-text px-3 py-1.5 bg-brand-elevated rounded-lg"
                     >
                       <Share2 size={13} /> Compartir
+                    </button>
+                    <button
+                      onClick={() => showGroupQr(group._id, group.name)}
+                      disabled={loadingQr === group._id}
+                      className="flex items-center gap-1.5 text-xs text-brand-muted active:text-brand-text px-3 py-1.5 bg-brand-elevated rounded-lg disabled:opacity-40"
+                    >
+                      <QrCode size={13} /> {loadingQr === group._id ? '...' : 'QR'}
                     </button>
                     <button
                       onClick={() => setShowInvite(showInvite === group._id ? null : group._id)}
@@ -416,5 +433,65 @@ export default function Groups() {
         </>
       )}
     </div>
+
+    {/* QR modal */}
+    {qrData && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+        onClick={() => setQrData(null)}
+      >
+        <div
+          className="card w-full max-w-xs p-5 flex flex-col items-center gap-4"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between w-full">
+            <h3 className="font-bold truncate mr-2">{qrData.groupName}</h3>
+            <button
+              onClick={() => setQrData(null)}
+              className="p-1.5 rounded-lg bg-brand-elevated text-brand-muted flex-shrink-0"
+              aria-label="Cerrar"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl">
+            <QRCodeCanvas
+              id="group-qr-canvas"
+              value={qrData.link}
+              size={200}
+              marginSize={1}
+            />
+          </div>
+
+          <p className="text-xs text-brand-muted text-center break-all leading-relaxed">{qrData.link}</p>
+
+          <div className="flex gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => copyInviteLink(qrData.groupId)}
+              className="btn-secondary text-sm flex-1 flex items-center justify-center gap-1.5"
+            >
+              <LinkIcon size={14} /> Copiar enlace
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const canvas = document.getElementById('group-qr-canvas')
+                const url = canvas.toDataURL('image/png')
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `qr-${qrData.groupName.replace(/\s+/g, '-')}.png`
+                a.click()
+              }}
+              className="btn-secondary text-sm flex-1"
+            >
+              Descargar QR
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

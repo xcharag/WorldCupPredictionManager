@@ -23,10 +23,17 @@ export default function Leaderboard() {
   const [group, setGroup] = useState(null)
   const [scope, setScope] = useState(groupId || 'global')
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
 
   useEffect(() => {
     if (groupId) setScope(groupId)
   }, [groupId])
+
+  // Reset to first page whenever the scope or page size changes
+  useEffect(() => {
+    setPage(1)
+  }, [scope, pageSize])
 
   useEffect(() => {
     api.get('/groups').then((res) => setGroups(res.data || []))
@@ -56,6 +63,8 @@ export default function Leaderboard() {
   if (loading) return <LeaderboardSkeleton />
 
   const myEntry = entries.find(e => e.user._id === user?._id)
+  const totalPages = Math.ceil(entries.length / pageSize)
+  const paginatedEntries = entries.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <div className="page max-w-md mx-auto">
@@ -129,7 +138,7 @@ export default function Leaderboard() {
             <span className="w-12 text-right">Total</span>
           </div>
 
-          {entries.map((entry) => {
+          {paginatedEntries.map((entry) => {
             const isMe = entry.user._id === user?._id
             const ft = entry.user.favoriteTeam
             const initials = entry.user.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
@@ -178,6 +187,85 @@ export default function Leaderboard() {
             <p className="text-brand-muted text-sm text-center px-4 py-6">Sin puntajes aun</p>
           )}
         </div>
+
+        {/* Pagination controls */}
+        {entries.length > 0 && (
+          <div className="mt-4 flex flex-col gap-3">
+            {/* Page size selector */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-brand-muted">
+                {entries.length} jugadores · página {page} de {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-brand-muted">Por página:</span>
+                <div className="flex gap-1">
+                  {[10, 20, 50, 100].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setPageSize(size)}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                        pageSize === size
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-brand-elevated text-brand-muted active:bg-brand-border'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Prev / page numbers / Next */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-elevated text-brand-text disabled:opacity-40 active:bg-brand-border transition-colors"
+                >
+                  ‹ Anterior
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) acc.push('...')
+                      acc.push(p)
+                      return acc
+                    }, [])
+                    .map((item, idx) =>
+                      item === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-1 py-1.5 text-xs text-brand-muted">…</span>
+                      ) : (
+                        <button
+                          key={item}
+                          onClick={() => setPage(item)}
+                          className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors ${
+                            page === item
+                              ? 'bg-brand-primary text-white'
+                              : 'bg-brand-elevated text-brand-muted active:bg-brand-border'
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      )
+                    )
+                  }
+                </div>
+
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-elevated text-brand-text disabled:opacity-40 active:bg-brand-border transition-colors"
+                >
+                  Siguiente ›
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

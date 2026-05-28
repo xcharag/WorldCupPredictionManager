@@ -77,6 +77,16 @@ const ENTRIES = [
       'Mejoras de estabilidad en la sincronización de marcadores en vivo',
     ],
   },
+  {
+    version: '1.5.0',
+    date: new Date('2026-05-28'),
+    title: 'QR de invitación y tabla de posiciones paginada',
+    items: [
+      'Generá un código QR de tu grupo para que cualquiera pueda unirse escaneándolo',
+      'El QR se puede copiar como enlace o descargar como imagen desde el mismo panel',
+      'La tabla de posiciones ahora está paginada: elegí cuántos jugadores ver por página (10, 20, 50 o 100)',
+    ],
+  },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 
