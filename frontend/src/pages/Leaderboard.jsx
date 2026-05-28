@@ -193,28 +193,23 @@ export default function Leaderboard() {
           <div className="mt-4 flex flex-col gap-3">
             {/* Page size selector */}
             <div className="flex items-center justify-between">
-              <p className="text-xs text-brand-muted">
-                {entries.length} jugadores · página {page} de {totalPages}
-              </p>
+              <p className="text-xs text-brand-muted">{entries.length} jugadores</p>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-brand-muted">Por página:</span>
-                <div className="flex gap-1">
-                  {[10, 20, 50, 100].map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setPageSize(size)}
-                      className={`px-2 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                        pageSize === size
-                          ? 'bg-brand-primary text-white'
-                          : 'bg-brand-elevated text-brand-muted active:bg-brand-border'
-                      }`}
-                    >
-                      {size}
-                    </button>
+                <select
+                  value={pageSize}
+                  onChange={e => setPageSize(Number(e.target.value))}
+                  className="text-xs font-semibold bg-brand-elevated text-brand-text border border-brand-border rounded-lg px-2 py-1 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                >
+                  {[10, 20, 50, 100].map(size => (
+                    <option key={size} value={size}>{size}</option>
                   ))}
-                </div>
+                </select>
               </div>
             </div>
+            <p className="text-xs text-brand-muted text-center">
+              Página {page} de {totalPages}
+            </p>
 
             {/* Prev / page numbers / Next */}
             {totalPages > 1 && (

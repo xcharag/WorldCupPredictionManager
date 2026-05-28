@@ -313,6 +313,11 @@ export default function Groups() {
                       <p className="text-xs text-brand-muted">
                         {group.members?.length || 0} miembros · por @{group.creator?.nickname}
                       </p>
+                      {group.description && (
+                        <p className="text-xs text-brand-muted mt-1 line-clamp-2 leading-relaxed">
+                          {group.description}
+                        </p>
+                      )}
                     </div>
                     <ChevronRight size={18} className="text-brand-muted flex-shrink-0" />
                   </button>
@@ -374,9 +379,14 @@ export default function Groups() {
               <Globe size={48} className="text-brand-muted mx-auto mb-3" />
               <p className="text-brand-muted">No hay grupos publicos disponibles.</p>
             </div>
+          ) : publicGroups.filter(g => !g.isMember).length === 0 ? (
+            <div className="text-center py-16">
+              <Globe size={48} className="text-brand-muted mx-auto mb-3" />
+              <p className="text-brand-muted">Ya eres miembro de todos los grupos disponibles.</p>
+            </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {publicGroups.map(group => (
+              {publicGroups.filter(g => !g.isMember).map(group => (
                 <div key={group._id} className="card">
                   <div className="flex items-start gap-3">
                     <div className="w-11 h-11 bg-brand-elevated rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
