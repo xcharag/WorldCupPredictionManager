@@ -23,6 +23,7 @@ import PredictionForm from './pages/PredictionForm'
 import TournamentPredictions from './pages/TournamentPredictions'
 import Leaderboard from './pages/Leaderboard'
 import Matches from './pages/Matches'
+import MatchStats from './pages/MatchStats'
 import Profile from './pages/Profile'
 import UserProfile from './pages/UserProfile'
 
@@ -35,6 +36,7 @@ import AdminResults from './pages/admin/AdminResults'
 import AdminScoring from './pages/admin/AdminScoring'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminCron from './pages/admin/AdminCron'
+import AdminEmailBlast from './pages/admin/AdminEmailBlast'
 
 export default function App() {
   return (
@@ -63,6 +65,7 @@ export default function App() {
             <Route path="/groups/:groupId/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
             <Route path="/matches/:matchId" element={<ProtectedRoute><PredictionForm /></ProtectedRoute>} />
+            <Route path="/matches/:matchId/stats" element={<ProtectedRoute><MatchStats /></ProtectedRoute>} />
             <Route path="/tournament" element={<ProtectedRoute><TournamentPredictions /></ProtectedRoute>} />
 
             {/* Global leaderboard */}
@@ -79,6 +82,7 @@ export default function App() {
             <Route path="/admin/scoring" element={<ProtectedRoute adminOnly><AdminScoring /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin/cron" element={<ProtectedRoute adminOnly><AdminCron /></ProtectedRoute>} />
+            <Route path="/admin/email-blast" element={<ProtectedRoute adminOnly><AdminEmailBlast /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />

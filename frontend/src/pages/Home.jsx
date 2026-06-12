@@ -35,7 +35,9 @@ export default function Home() {
 
   const [nextUnpredicted, setNextUnpredicted] = useState(null)
   const [tournamentPending, setTournamentPending] = useState(null)
+  const [unlockExpiry, setUnlockExpiry] = useState(null)
   const [countdown, setCountdown] = useState(null)
+  const [unlockCountdown, setUnlockCountdown] = useState(null)
   const [pendingLoading, setPendingLoading] = useState(true)
 
   // Changelog / Novedades
@@ -123,8 +125,11 @@ export default function Home() {
         setNextUnpredicted({ match: upcoming[0], count: upcoming.length })
         setCountdown(getTimeLeft(upcoming[0].matchDate))
       }
-      const { isLocked, prediction } = tournRes.data
-      if (!isLocked) {
+      const { isLocked, prediction, unlockExpiry: expiry } = tournRes.data
+      if (expiry && new Date(expiry) > new Date()) {
+        setUnlockExpiry(new Date(expiry))
+        setUnlockCountdown(getTimeLeft(expiry))
+      } else if (!isLocked) {
         const missing = prediction ? TOURNAMENT_FIELDS.filter(f => !prediction[f]).length : 6
         if (missing > 0) setTournamentPending({ missingCount: missing })
       }
@@ -136,6 +141,16 @@ export default function Home() {
     const id = setInterval(() => setCountdown(getTimeLeft(nextUnpredicted.match.matchDate)), 1000)
     return () => clearInterval(id)
   }, [nextUnpredicted])
+
+  useEffect(() => {
+    if (!unlockExpiry) return
+    const id = setInterval(() => {
+      const t = getTimeLeft(unlockExpiry)
+      if (!t) { setUnlockExpiry(null); setUnlockCountdown(null) }
+      else setUnlockCountdown(t)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [unlockExpiry])
 
   return (
     <div className="min-h-screen bg-brand-bg" style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>
@@ -178,6 +193,47 @@ export default function Home() {
             <p className="text-brand-accent text-[11px] font-bold uppercase tracking-widest">Demostra tu futbol</p>
           </div>
         </div>
+
+        {/* Tournament unlock window — urgent banner */}
+        {unlockExpiry && unlockCountdown && (
+          <div className="mb-4 rounded-2xl overflow-hidden border-2 border-amber-500/60 bg-amber-950/30 dark:bg-amber-900/20">
+            {/* Amber top stripe */}
+            <div className="bg-amber-500 px-4 py-1.5 flex items-center gap-2">
+              <Trophy size={14} className="text-amber-950 flex-shrink-0" />
+              <span className="text-amber-950 text-[11px] font-extrabold uppercase tracking-widest">
+                Ventana especial activa
+              </span>
+            </div>
+
+            <div className="px-4 py-4">
+              <p className="font-extrabold text-lg text-amber-300 leading-tight mb-1">
+                ¡Última oportunidad!
+              </p>
+              <p className="text-sm text-amber-200/80 mb-4 leading-snug">
+                Completá tu pronóstico del campeonato antes de que se cierre esta ventana.
+              </p>
+
+              {/* Countdown */}
+              <div className="flex gap-2 mb-4">
+                {unlockCountdown.d > 0 && (
+                  <TimeUnit value={unlockCountdown.d} label="días" />
+                )}
+                <TimeUnit value={unlockCountdown.h} label="hs" />
+                <TimeUnit value={unlockCountdown.m} label="min" />
+                <TimeUnit value={unlockCountdown.s} label="seg" />
+              </div>
+
+              <button
+                onClick={() => navigate('/tournament')}
+                className="w-full bg-amber-500 active:bg-amber-400 text-amber-950 font-extrabold rounded-xl py-3 text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                <Trophy size={16} />
+                Completar pronóstico del torneo
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Email verification banner */}
         {user && !user.isEmailVerified && (
@@ -468,6 +524,17 @@ export default function Home() {
         </div>,
         document.body
       )}
+    </div>
+  )
+}
+
+function TimeUnit({ value, label }) {
+  return (
+    <div className="flex flex-col items-center bg-amber-950/50 rounded-xl px-3 py-2 min-w-[52px]">
+      <span className="text-2xl font-black tabular-nums text-amber-300 leading-none">
+        {String(value).padStart(2, '0')}
+      </span>
+      <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wide mt-0.5">{label}</span>
     </div>
   )
 }

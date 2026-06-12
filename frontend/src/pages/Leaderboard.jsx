@@ -14,6 +14,11 @@ function RankBadge({ rank }) {
   return <div className="rank-badge bg-brand-elevated text-brand-muted text-xs">{rank}</div>
 }
 
+const LB_KEY = 'leaderboard_state'
+function loadLbState() {
+  try { return JSON.parse(sessionStorage.getItem(LB_KEY) || '{}') } catch { return {} }
+}
+
 export default function Leaderboard() {
   const { groupId } = useParams()
   const { user } = useAuth()
@@ -21,14 +26,22 @@ export default function Leaderboard() {
   const [entries, setEntries] = useState([])
   const [groups, setGroups] = useState([])
   const [group, setGroup] = useState(null)
-  const [scope, setScope] = useState(groupId || 'global')
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(50)
 
+  const saved = loadLbState()
+  const [scope, setScope] = useState(groupId || saved.scope || 'global')
+  const [page, setPage] = useState(saved.page || 1)
+  const [pageSize, setPageSize] = useState(saved.pageSize || 50)
+
+  // URL param (e.g. /leaderboard/:groupId) always wins over saved state
   useEffect(() => {
     if (groupId) setScope(groupId)
   }, [groupId])
+
+  // Persist state to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem(LB_KEY, JSON.stringify({ scope, page, pageSize }))
+  }, [scope, page, pageSize])
 
   // Reset to first page whenever the scope or page size changes
   useEffect(() => {

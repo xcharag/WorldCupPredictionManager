@@ -1,8 +1,8 @@
 /**
  * football-data.org API v4 client
  *
- * Free tier: 10 requests / minute.
- * We enforce a 6.2-second gap between calls to stay comfortably under the limit.
+ * Paid tier: 20 requests / minute.
+ * We enforce a 3.1-second gap between calls to stay comfortably under the limit.
  * All functions return parsed JSON data directly.
  *
  * Env var: FOOTBALL_DATA_API_KEY
@@ -11,7 +11,7 @@
 const axios = require('axios');
 
 const BASE = 'https://api.football-data.org/v4';
-const MIN_DELAY_MS = 6200; // 10 req/min → 6 s min; +200 ms safety buffer
+const MIN_DELAY_MS = 3100; // 20 req/min → 3 s min; +100 ms safety buffer
 
 let lastRequestAt = 0;
 
@@ -67,4 +67,15 @@ function getMatch(footballDataId) {
   return apiGet(`/matches/${footballDataId}`);
 }
 
-module.exports = { getWCTeams, getWCMatches, getMatch };
+/** GET /v4/competitions/2000/matches?status=LIVE — all currently live WC matches
+ *  LIVE is a pseudo-status defined by the API that combines IN_PLAY and PAUSED. */
+function getLiveWCMatches() {
+  return apiGet('/competitions/2000/matches?status=LIVE');
+}
+
+/** GET /v4/competitions/2000/standings — group stage standings for WC 2026 */
+function getWCStandings() {
+  return apiGet('/competitions/2000/standings');
+}
+
+module.exports = { getWCTeams, getWCMatches, getMatch, getLiveWCMatches, getWCStandings };

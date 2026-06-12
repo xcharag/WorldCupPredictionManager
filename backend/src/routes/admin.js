@@ -10,6 +10,8 @@ const { protect } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
 const { calculateMatchPredictions, calculateTournamentPredictions } = require('../services/scoring');
 const cl = require('../services/cronLogger');
+const User = require('../models/User');
+const { sendEmail } = require('../services/email');
 
 router.use(protect, requireAdmin);
 
@@ -659,7 +661,8 @@ router.get('/settings', async (req, res) => {
   try {
     const locked = await Settings.get('tournamentPredictionsLocked', false);
     const results = await Settings.get('tournamentResults', null);
-    res.json({ tournamentPredictionsLocked: locked, tournamentResults: results });
+    const tournamentUnlockExpiry = await Settings.get('tournamentUnlockExpiry', null);
+    res.json({ tournamentPredictionsLocked: locked, tournamentResults: results, tournamentUnlockExpiry });
   } catch { res.status(500).json({ message: 'Server error' }); }
 });
 
@@ -669,6 +672,39 @@ router.post('/settings/lock-tournament', async (req, res) => {
     const { locked } = req.body;
     await Settings.set('tournamentPredictionsLocked', locked !== false);
     res.json({ message: `Tournament predictions ${locked !== false ? 'locked' : 'unlocked'}` });
+  } catch { res.status(500).json({ message: 'Server error' }); }
+});
+
+// POST /api/admin/settings/unlock-tournament — open a timed window to re-edit tournament predictions
+router.post('/settings/unlock-tournament', async (req, res) => {
+  try {
+    const hours = Math.min(Math.max(Number(req.body.hours) || 24, 1), 72);
+    const expiry = new Date(Date.now() + hours * 60 * 60 * 1000);
+    await Settings.set('tournamentUnlockExpiry', expiry.toISOString());
+    res.json({ message: 'Ventana de predicciones del torneo abierta', expiresAt: expiry, hours });
+  } catch { res.status(500).json({ message: 'Server error' }); }
+});
+
+// POST /api/admin/email-blast — send a custom email to all registered users
+router.post('/email-blast', async (req, res) => {
+  const { subject, htmlBody, recipientType = 'verified' } = req.body;
+  if (!subject?.trim() || !htmlBody?.trim()) {
+    return res.status(400).json({ message: 'Se requieren asunto y cuerpo del mensaje' });
+  }
+  try {
+    const query = recipientType === 'all' ? {} : { isEmailVerified: true };
+    const users = await User.find(query).select('email name').lean();
+    let sent = 0, failed = 0;
+    for (const user of users) {
+      try {
+        await sendEmail({ to: user.email, subject: subject.trim(), html: htmlBody });
+        sent++;
+      } catch (err) {
+        failed++;
+        console.error(`[Admin] Email blast failed for ${user.email}:`, err.message);
+      }
+    }
+    res.json({ sent, failed, total: users.length });
   } catch { res.status(500).json({ message: 'Server error' }); }
 });
 

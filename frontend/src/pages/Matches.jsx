@@ -5,6 +5,7 @@ import MatchCard from '../components/MatchCard'
 import { MatchListSkeleton } from '../components/Skeletons'
 import { useToast, ToastContainer } from '../components/Toast'
 import TournamentPredictions from './TournamentPredictions'
+import GroupStandings from '../components/GroupStandings'
 
 const STAGES = [
   { key: 'all', label: 'Todos' },
@@ -17,21 +18,43 @@ const STAGES = [
   { key: 'final', label: 'Final' },
 ]
 
+const FILTERS_KEY = 'matches_filters'
+
+function loadSavedFilters() {
+  try { return JSON.parse(sessionStorage.getItem(FILTERS_KEY) || '{}') } catch { return {} }
+}
+
 export default function Matches() {
   const navigate = useNavigate()
   const { toasts, addToast, removeToast } = useToast()
   const [matches, setMatches] = useState([])
   const [predictionsByMatch, setPredictionsByMatch] = useState({})
-  const [stage, setStage] = useState('all')
-  const [selectedGroups, setSelectedGroups] = useState([])
-  const [selectedMatchday, setSelectedMatchday] = useState(null)
-  const [filterDate, setFilterDate] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('partidos')
   const location = useLocation()
-  const [filterUnpredicted, setFilterUnpredicted] = useState(
-    () => new URLSearchParams(location.search).get('filter') === 'unpredicted'
-  )
+
+  // Restore filters from sessionStorage; URL param takes precedence for filterUnpredicted
+  const saved = loadSavedFilters()
+  const urlUnpredicted = new URLSearchParams(location.search).get('filter') === 'unpredicted'
+  const [stage, setStage] = useState(saved.stage || 'all')
+  const [selectedGroups, setSelectedGroups] = useState(saved.selectedGroups || [])
+  const [selectedMatchday, setSelectedMatchday] = useState(saved.selectedMatchday ?? null)
+  const [filterDate, setFilterDate] = useState(saved.filterDate || '')
+  const [filterUnpredicted, setFilterUnpredicted] = useState(urlUnpredicted || saved.filterUnpredicted || false)
+  const [view, setView] = useState(saved.view || 'partidos')
+  const [loading, setLoading] = useState(true)
+
+  // Restore scroll position when returning from the stats page
+  useEffect(() => {
+    const saved = sessionStorage.getItem('matches_scroll')
+    if (saved) {
+      window.scrollTo({ top: parseInt(saved, 10), behavior: 'instant' })
+      sessionStorage.removeItem('matches_scroll')
+    }
+  }, [])
+
+  // Persist filter state to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem(FILTERS_KEY, JSON.stringify({ stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, view }))
+  }, [stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, view])
 
   useEffect(() => {
     Promise.all([api.get('/matches'), api.get('/predictions/mine')])
@@ -85,21 +108,23 @@ export default function Matches() {
 
       {/* Segment toggle */}
       <div className="flex rounded-xl bg-brand-elevated p-1 mb-4">
-        <button
-          onClick={() => setView('partidos')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${view === 'partidos' ? 'bg-brand-surface text-brand-text shadow-sm' : 'text-brand-muted'}`}
-        >
-          Partidos
-        </button>
-        <button
-          onClick={() => setView('torneo')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${view === 'torneo' ? 'bg-brand-surface text-brand-text shadow-sm' : 'text-brand-muted'}`}
-        >
-          Tops
-        </button>
+        {[
+          { key: 'partidos', label: 'Partidos' },
+          { key: 'torneo', label: 'Tops' },
+          { key: 'posiciones', label: 'Posiciones' },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setView(key)}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${view === key ? 'bg-brand-surface text-brand-text shadow-sm' : 'text-brand-muted'}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {view === 'torneo' && <TournamentPredictions embedded />}
+      {view === 'posiciones' && <GroupStandings />}
 
       {view === 'partidos' && loading && <MatchListSkeleton embedded />}
 
@@ -213,6 +238,11 @@ export default function Matches() {
               prediction={predictionsByMatch[match._id]}
               showPrediction
               onClick={() => {
+                if (match.status === 'finished') {
+                  sessionStorage.setItem('matches_scroll', String(window.scrollY))
+                  navigate(`/matches/${match._id}/stats`, { state: { match } })
+                  return
+                }
                 if (!canEditPrediction(match)) {
                   addToast('No podes modificar una prediccion de un partido pasado o finalizado.', 'error')
                   return

@@ -87,6 +87,20 @@ const ENTRIES = [
       'La tabla de posiciones ahora está paginada: elegí cuántos jugadores ver por página (10, 20, 50 o 100)',
     ],
   },
+  {
+    version: '1.6.0',
+    date: new Date('2026-06-12'),
+    title: 'Estadísticas de partidos y mejoras del torneo',
+    items: [
+      'Tocá cualquier partido finalizado para ver las estadísticas: distribución de resultados pronosticados y quién apostó a qué',
+      'Filtrá la lista de pronósticos por resultado exacto tocando los chips de resultados más populares',
+      'Los perfiles de usuario ahora muestran los pronósticos del torneo (campeón, goleador, etc.)',
+      'Nueva vista de tabla de posiciones de grupos dentro de la sección Predicciones',
+      'Aviso urgente en el inicio con cuenta regresiva cuando se abre una ventana para editar pronósticos del torneo',
+      'Notificaciones push al instante cuando se marca un gol durante un partido en vivo',
+      'Corrección: ya no aparece el error 429 al navegar entre pantallas con muchos escudos cargados',
+    ],
+  },
 ];
 // ─────────────────────────────────────────────────────────────────────────────
 
