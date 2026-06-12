@@ -13,8 +13,6 @@ const FIELDS = [
   { key: 'runnerUp', label: 'Subcampeon', icon: '🥈', points: '+30 pts', type: 'team' },
   { key: 'topScorer', label: 'Maximo goleador', icon: '⚽', points: '+30 pts', type: 'player' },
   { key: 'topAssister', label: 'Maximo asistidor', icon: '🎯', points: '+20 pts', type: 'player' },
-  { key: 'mostYellowCards', label: 'Mas tarjetas amarillas', icon: '🟨', points: '+20 pts', type: 'player' },
-  { key: 'mostRedCards', label: 'Mas tarjetas rojas', icon: '🟥', points: '+20 pts', type: 'player' },
 ]
 
 export default function TournamentPredictions({ embedded = false }) {
@@ -31,7 +29,6 @@ export default function TournamentPredictions({ embedded = false }) {
   const [nowMs, setNowMs] = useState(Date.now())
   const [form, setForm] = useState({
     champion: '', runnerUp: '', topScorer: '', topAssister: '',
-    mostYellowCards: '', mostRedCards: '',
   })
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -54,8 +51,6 @@ export default function TournamentPredictions({ embedded = false }) {
           runnerUp: p.runnerUp?._id || p.runnerUp || '',
           topScorer: p.topScorer?._id || p.topScorer || '',
           topAssister: p.topAssister?._id || p.topAssister || '',
-          mostYellowCards: p.mostYellowCards?._id || p.mostYellowCards || '',
-          mostRedCards: p.mostRedCards?._id || p.mostRedCards || '',
         })
       }
     }).finally(() => setLoading(false))

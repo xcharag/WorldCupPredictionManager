@@ -186,13 +186,13 @@ router.post('/tournament', protect, async (req, res) => {
 
     // Convert empty strings to null — avoids ObjectId cast errors for unpopulated fields
     const toId = (v) => (v && typeof v === 'string' && v.trim() !== '') ? v : null;
+    // mostYellowCards / mostRedCards are intentionally excluded — those fields
+    // are locked after matches start since card stats accumulate from day 1.
     const update = {
-      champion:        toId(req.body.champion),
-      runnerUp:        toId(req.body.runnerUp),
-      topScorer:       toId(req.body.topScorer),
-      topAssister:     toId(req.body.topAssister),
-      mostYellowCards: toId(req.body.mostYellowCards),
-      mostRedCards:    toId(req.body.mostRedCards),
+      champion:    toId(req.body.champion),
+      runnerUp:    toId(req.body.runnerUp),
+      topScorer:   toId(req.body.topScorer),
+      topAssister: toId(req.body.topAssister),
       points: null, // reset so scoring gets recalculated after the tournament
     };
 
