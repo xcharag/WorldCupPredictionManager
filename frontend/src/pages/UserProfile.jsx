@@ -1,10 +1,74 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { X } from 'lucide-react'
+import { X, ChevronDown, ChevronUp } from 'lucide-react'
 import api from '../services/api'
 import PageHeader from '../components/PageHeader'
 import MinioImage from '../components/MinioImage'
 import { useAuth } from '../contexts/AuthContext'
+
+const TOURNAMENT_FIELDS = [
+  { key: 'champion', label: 'Campeón', icon: '🏆', type: 'team' },
+  { key: 'runnerUp', label: 'Subcampeón', icon: '🥈', type: 'team' },
+  { key: 'topScorer', label: 'Máx. goleador', icon: '⚽', type: 'player' },
+  { key: 'topAssister', label: 'Máx. asistidor', icon: '🎯', type: 'player' },
+  { key: 'mostYellowCards', label: 'Más amarillas', icon: '🟨', type: 'player' },
+  { key: 'mostRedCards', label: 'Más rojas', icon: '🟥', type: 'player' },
+]
+
+function TournamentSection({ tp, isMe }) {
+  const [open, setOpen] = useState(false)
+  const hasAny = tp && TOURNAMENT_FIELDS.some(f => tp[f.key])
+
+  if (!hasAny) return (
+    <div className="card text-center py-5">
+      <p className="text-brand-muted text-sm">
+        {isMe ? 'Todavía no guardaste tus pronosticos del torneo.' : 'Este usuario no tiene pronosticos del torneo aún.'}
+      </p>
+    </div>
+  )
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full card flex items-center justify-between text-left active:bg-brand-elevated mb-3"
+      >
+        <div>
+          <p className="font-semibold">Pronosticos del torneo</p>
+          {tp.points !== null && tp.points !== undefined && (
+            <p className="text-xs text-brand-primary mt-0.5">+{tp.points} pts ganados</p>
+          )}
+        </div>
+        {open ? <ChevronUp size={18} className="text-brand-muted" /> : <ChevronDown size={18} className="text-brand-muted" />}
+      </button>
+
+      {open && (
+        <div className="card mb-3 divide-y divide-brand-border">
+          {TOURNAMENT_FIELDS.map(({ key, label, icon, type }) => {
+            const val = tp[key]
+            return (
+              <div key={key} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                <span className="text-xs text-brand-muted flex items-center gap-1.5">
+                  <span>{icon}</span> {label}
+                </span>
+                {val ? (
+                  <div className="flex items-center gap-1.5 text-right">
+                    {type === 'team' && <span className="text-base">{val.flag}</span>}
+                    <span className="text-sm font-semibold">
+                      {type === 'team' ? val.shortName || val.name : `${val.name}${val.team ? ` (${val.team.shortName || val.team.name})` : ''}`}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-brand-muted italic">Sin selección</span>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const STAGE_LABELS = {
   group_stage: 'Fase de grupos',
@@ -131,7 +195,7 @@ export default function UserProfile() {
     </div>
   )
 
-  const { user, predictions } = data
+  const { user, predictions, tournamentPrediction } = data
   const initials = user.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
   const ft = user.favoriteTeam
   const isMe = me?._id === userId
@@ -177,7 +241,10 @@ export default function UserProfile() {
           </div>
         </div>
 
-        {/* Predictions section */}
+        {/* Tournament predictions */}
+        <TournamentSection tp={tournamentPrediction} isMe={isMe} />
+
+        {/* Match predictions section */}
         {predictions.length > 0 ? (
           <div>
             <button

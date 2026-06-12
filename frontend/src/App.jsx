@@ -23,6 +23,7 @@ import PredictionForm from './pages/PredictionForm'
 import TournamentPredictions from './pages/TournamentPredictions'
 import Leaderboard from './pages/Leaderboard'
 import Matches from './pages/Matches'
+import MatchStats from './pages/MatchStats'
 import Profile from './pages/Profile'
 import UserProfile from './pages/UserProfile'
 
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/groups/:groupId/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
             <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
             <Route path="/matches/:matchId" element={<ProtectedRoute><PredictionForm /></ProtectedRoute>} />
+            <Route path="/matches/:matchId/stats" element={<ProtectedRoute><MatchStats /></ProtectedRoute>} />
             <Route path="/tournament" element={<ProtectedRoute><TournamentPredictions /></ProtectedRoute>} />
 
             {/* Global leaderboard */}

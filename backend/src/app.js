@@ -53,21 +53,25 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
-// Google OAuth routes are excluded from all rate limiters — they are one-shot redirects
-// handled by Google's own servers, and blocking them produces a confusing 429 JSON page
-// instead of a browser-visible error.
-const skipGoogleOAuth = (req) => req.originalUrl.startsWith('/api/auth/google');
+// Google OAuth and image-signing are excluded from the rate limiter:
+//   - OAuth: one-shot redirects handled by Google; blocking produces a confusing 429 JSON page.
+//   - /api/images/signed: already behind JWT auth and Redis-cached on the backend; a single
+//     page load with 48 team badges fires 48 requests, so counting them burns the quota fast
+//     with zero security benefit.
+const skipRateLimit = (req) =>
+  req.originalUrl.startsWith('/api/auth/google') ||
+  req.originalUrl.startsWith('/api/images/signed');
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: skipGoogleOAuth,
+  skip: skipRateLimit,
 });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, skip: skipGoogleOAuth });
 app.use('/api/', limiter);
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 20, skip: skipRateLimit }));
+app.use('/api/auth/register', rateLimit({ windowMs: 15 * 60 * 1000, max: 20, skip: skipRateLimit }));
 
 // Passport
 app.use(passport.initialize());

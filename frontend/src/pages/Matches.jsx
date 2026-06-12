@@ -42,6 +42,15 @@ export default function Matches() {
   const [view, setView] = useState(saved.view || 'partidos')
   const [loading, setLoading] = useState(true)
 
+  // Restore scroll position when returning from the stats page
+  useEffect(() => {
+    const saved = sessionStorage.getItem('matches_scroll')
+    if (saved) {
+      window.scrollTo({ top: parseInt(saved, 10), behavior: 'instant' })
+      sessionStorage.removeItem('matches_scroll')
+    }
+  }, [])
+
   // Persist filter state to sessionStorage whenever it changes
   useEffect(() => {
     sessionStorage.setItem(FILTERS_KEY, JSON.stringify({ stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, view }))
@@ -229,6 +238,11 @@ export default function Matches() {
               prediction={predictionsByMatch[match._id]}
               showPrediction
               onClick={() => {
+                if (match.status === 'finished') {
+                  sessionStorage.setItem('matches_scroll', String(window.scrollY))
+                  navigate(`/matches/${match._id}/stats`, { state: { match } })
+                  return
+                }
                 if (!canEditPrediction(match)) {
                   addToast('No podes modificar una prediccion de un partido pasado o finalizado.', 'error')
                   return
