@@ -218,4 +218,34 @@ async function sendMatchStartPushReminders() {
   return sent > 0 ? `${sent} push de partido enviados` : null;
 }
 
-module.exports = { sendPushToUser, sendDailyPushReminders, sendMatchStartPushReminders };
+/**
+ * Called when a goal is scored during a live match.
+ * Notifies all users who have push subscriptions enabled.
+ * `match` must have homeTeam/awayTeam populated (shortName).
+ */
+async function sendGoalNotification(match) {
+  if (!initWebPush()) return;
+
+  const home = match.homeTeam?.shortName || '?';
+  const away = match.awayTeam?.shortName || '?';
+  const scoreStr = `${match.homeScore ?? 0}–${match.awayScore ?? 0}`;
+
+  const users = await User.find({
+    pushNotificationsEnabled: true,
+    pushSubscriptions: { $exists: true, $not: { $size: 0 } },
+  }).select('_id pushSubscriptions');
+
+  for (const user of users) {
+    try {
+      await sendPushToUser(user, {
+        title: `⚽ ¡Gooool! ${home} ${scoreStr} ${away}`,
+        body: 'El marcador ha cambiado',
+        url: '/matches',
+      });
+    } catch (err) {
+      console.error(`[Push] Goal notification error for user ${user._id}:`, err.message);
+    }
+  }
+}
+
+module.exports = { sendPushToUser, sendDailyPushReminders, sendMatchStartPushReminders, sendGoalNotification };

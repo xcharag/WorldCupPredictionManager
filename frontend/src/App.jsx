@@ -35,6 +35,7 @@ import AdminResults from './pages/admin/AdminResults'
 import AdminScoring from './pages/admin/AdminScoring'
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminCron from './pages/admin/AdminCron'
+import AdminEmailBlast from './pages/admin/AdminEmailBlast'
 
 export default function App() {
   return (
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="/admin/scoring" element={<ProtectedRoute adminOnly><AdminScoring /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
             <Route path="/admin/cron" element={<ProtectedRoute adminOnly><AdminCron /></ProtectedRoute>} />
+            <Route path="/admin/email-blast" element={<ProtectedRoute adminOnly><AdminEmailBlast /></ProtectedRoute>} />
 
             {/* 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />

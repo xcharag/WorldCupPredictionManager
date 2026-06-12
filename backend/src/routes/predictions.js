@@ -119,7 +119,14 @@ router.post('/tournament', protect, async (req, res) => {
   try {
     const firstMatch = await Match.findOne().sort({ matchDate: 1 }).select('matchDate');
     const manualLock = !!(await Settings.get('tournamentPredictionsLocked', false));
-    const isLocked = manualLock || (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
+    let isLocked = manualLock || (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
+
+    // Admin can open a timed unlock window to let users change their tournament predictions
+    if (isLocked) {
+      const unlockExpiry = await Settings.get('tournamentUnlockExpiry', null);
+      if (unlockExpiry && new Date(unlockExpiry) > new Date()) isLocked = false;
+    }
+
     if (isLocked) {
       return res.status(400).json({ message: 'Tournament predictions are locked' });
     }
@@ -150,6 +157,17 @@ router.post('/tournament', protect, async (req, res) => {
   }
 });
 
+// Helper — compute tournament lock state honoring the admin unlock window
+async function getTournamentLockState() {
+  const firstMatch = await Match.findOne().sort({ matchDate: 1 }).select('matchDate');
+  let isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) ||
+    (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
+  const unlockExpiry = await Settings.get('tournamentUnlockExpiry', null);
+  const unlockActive = !!(unlockExpiry && new Date(unlockExpiry) > new Date());
+  if (isLocked && unlockActive) isLocked = false;
+  return { isLocked, lockAt: firstMatch?.matchDate || null, unlockExpiry: unlockActive ? unlockExpiry : null };
+}
+
 // GET /api/predictions/tournament/:groupId — get user's tournament prediction
 router.get('/tournament/:groupId', protect, async (req, res) => {
   try {
@@ -164,9 +182,8 @@ router.get('/tournament/:groupId', protect, async (req, res) => {
       .populate('mostYellowCards', 'name team')
       .populate('mostRedCards', 'name team');
 
-    const firstMatch = await Match.findOne().sort({ matchDate: 1 }).select('matchDate');
-    const isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) || (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
-    res.json({ prediction: prediction || null, isLocked, lockAt: firstMatch?.matchDate || null });
+    const { isLocked, lockAt, unlockExpiry } = await getTournamentLockState();
+    res.json({ prediction: prediction || null, isLocked, lockAt, unlockExpiry });
   } catch (err) {
     if (err.status) return res.status(err.status).json({ message: err.message });
     res.status(500).json({ message: 'Server error' });
@@ -184,9 +201,8 @@ router.get('/tournament', protect, async (req, res) => {
       .populate('mostYellowCards', 'name team')
       .populate('mostRedCards', 'name team');
 
-    const firstMatch = await Match.findOne().sort({ matchDate: 1 }).select('matchDate');
-    const isLocked = !!(await Settings.get('tournamentPredictionsLocked', false)) || (firstMatch ? new Date() >= new Date(firstMatch.matchDate) : false);
-    res.json({ prediction: prediction || null, isLocked, lockAt: firstMatch?.matchDate || null });
+    const { isLocked, lockAt, unlockExpiry } = await getTournamentLockState();
+    res.json({ prediction: prediction || null, isLocked, lockAt, unlockExpiry });
   } catch {
     res.status(500).json({ message: 'Server error' });
   }
