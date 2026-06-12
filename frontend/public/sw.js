@@ -9,6 +9,17 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(self.clients.claim());
 });
 
+// Force navigation requests (HTML page loads) to always hit the network.
+// This prevents the installed PWA from serving a stale index.html from the
+// browser HTTP cache after a new deploy.
+self.addEventListener('fetch', (e) => {
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match('/index.html'))
+    );
+  }
+});
+
 self.addEventListener('push', (e) => {
   const data = e.data ? e.data.json() : {};
   const title = data.title || 'FIFA World Cup 2026';

@@ -25,6 +25,9 @@ const { startScheduler } = require('./services/scheduler');
 
 const app = express();
 
+// Stamped once at process start — changes on every deploy/restart
+const DEPLOY_VERSION = Date.now().toString();
+
 // Trust proxy hops: Coolify deploys Traefik → nginx → Express (2 hops).
 // Set TRUST_PROXY_HOPS=1 in .env if running without an outer reverse proxy.
 app.set('trust proxy', parseInt(process.env.TRUST_PROXY_HOPS || '2', 10));
@@ -60,7 +63,8 @@ app.use(express.urlencoded({ extended: true }));
 //     with zero security benefit.
 const skipRateLimit = (req) =>
   req.originalUrl.startsWith('/api/auth/google') ||
-  req.originalUrl.startsWith('/api/images/signed');
+  req.originalUrl.startsWith('/api/images/signed') ||
+  req.originalUrl === '/api/version';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -92,6 +96,12 @@ app.use('/api/changelog', changelogRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
+
+// PWA version probe — frontend uses this to detect new deploys and bust its cache
+app.get('/api/version', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ version: DEPLOY_VERSION });
+});
 
 // Global error handler
 app.use((err, req, res, _next) => {

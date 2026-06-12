@@ -12,10 +12,33 @@ window.addEventListener('beforeinstallprompt', (e) => {
   window.__pwaInstallPrompt = e
 })
 
-registerServiceWorker()
+async function checkAndBustCache() {
+  try {
+    const res = await fetch('/api/version', { cache: 'no-store' })
+    if (!res.ok) return
+    const { version } = await res.json()
+    const stored = localStorage.getItem('app-deploy-version')
+    if (stored && stored !== version) {
+      localStorage.setItem('app-deploy-version', version)
+      if ('caches' in window) {
+        const keys = await caches.keys()
+        await Promise.all(keys.map((k) => caches.delete(k)))
+      }
+      window.location.reload()
+      return
+    }
+    localStorage.setItem('app-deploy-version', version)
+  } catch {
+    // Network unavailable — skip so the app still works offline
+  }
+}
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-)
+;(async () => {
+  await checkAndBustCache()
+  registerServiceWorker()
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  )
+})()
