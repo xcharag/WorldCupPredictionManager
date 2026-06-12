@@ -11,6 +11,10 @@ const { requireAdmin } = require('../middleware/admin');
 const { calculateMatchPredictions, calculateTournamentPredictions } = require('../services/scoring');
 const cl = require('../services/cronLogger');
 const User = require('../models/User');
+const Group = require('../models/Group');
+const MatchPrediction = require('../models/MatchPrediction');
+const TournamentPrediction = require('../models/TournamentPrediction');
+const MatchReminder = require('../models/MatchReminder');
 const { sendEmail } = require('../services/email');
 
 router.use(protect, requireAdmin);
@@ -716,6 +720,116 @@ router.put('/tournament-results', async (req, res) => {
     await Settings.set('tournamentResults', results);
     res.json({ message: 'Tournament results saved', results });
   } catch { res.status(500).json({ message: 'Server error' }); }
+});
+
+// ─── STATS ───────────────────────────────────────────────
+// GET /api/admin/stats — aggregated platform statistics (10-min cache)
+router.get('/stats', async (_req, res) => {
+  const CACHE_TTL_MS = 10 * 60 * 1000;
+  try {
+    const cached = await Settings.get('adminStatsCache', null);
+    if (cached && cached.cachedAt && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+      return res.json({ ...cached.data, fromCache: true, cachedAt: cached.cachedAt });
+    }
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+    // Registration trend: last 8 weeks grouped by ISO week
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - 7 * 7); // ~8 weeks ago
+
+    const [
+      totalUsers,
+      verifiedUsers,
+      googleUsers,
+      pushUsers,
+      activeUsersWeek,
+      activeUsersMonth,
+      registrationsByWeek,
+      totalMatchPredictions,
+      uniqueMatchPredictors,
+      totalTournamentPredictions,
+      uniqueTournamentPredictors,
+      topChampions,
+      totalGroups,
+      groupSizeAgg,
+      totalReminders,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ isEmailVerified: true }),
+      User.countDocuments({ googleId: { $exists: true, $ne: null } }),
+      User.countDocuments({ pushNotificationsEnabled: true }),
+      User.countDocuments({ lastLoginAt: { $gte: sevenDaysAgo } }),
+      User.countDocuments({ lastLoginAt: { $gte: thirtyDaysAgo } }),
+      User.aggregate([
+        { $match: { createdAt: { $gte: weekStart } } },
+        {
+          $group: {
+            _id: {
+              year: { $isoWeekYear: '$createdAt' },
+              week: { $isoWeek: '$createdAt' },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { '_id.year': 1, '_id.week': 1 } },
+      ]),
+      MatchPrediction.countDocuments(),
+      MatchPrediction.distinct('user').then((ids) => ids.length),
+      TournamentPrediction.countDocuments(),
+      TournamentPrediction.distinct('user').then((ids) => ids.length),
+      TournamentPrediction.aggregate([
+        { $match: { champion: { $ne: null } } },
+        { $group: { _id: '$champion', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+        { $lookup: { from: 'teams', localField: '_id', foreignField: '_id', as: 'team' } },
+        { $unwind: '$team' },
+        { $project: { _id: 0, name: '$team.name', flag: '$team.flag', count: 1 } },
+      ]),
+      Group.countDocuments(),
+      Group.aggregate([
+        { $project: { memberCount: { $size: '$members' } } },
+        { $group: { _id: null, avg: { $avg: '$memberCount' }, max: { $max: '$memberCount' } } },
+      ]),
+      MatchReminder.countDocuments(),
+    ]);
+
+    const data = {
+      users: {
+        total: totalUsers,
+        verified: verifiedUsers,
+        verifiedPct: totalUsers ? Math.round((verifiedUsers / totalUsers) * 100) : 0,
+        google: googleUsers,
+        local: totalUsers - googleUsers,
+        pushEnabled: pushUsers,
+        activeLastWeek: activeUsersWeek,
+        activeLastMonth: activeUsersMonth,
+        registrationsByWeek,
+      },
+      engagement: {
+        totalMatchPredictions,
+        uniqueMatchPredictors,
+        totalTournamentPredictions,
+        uniqueTournamentPredictors,
+        topChampions,
+      },
+      platform: {
+        totalGroups,
+        avgGroupSize: groupSizeAgg[0] ? Math.round(groupSizeAgg[0].avg * 10) / 10 : 0,
+        maxGroupSize: groupSizeAgg[0]?.max ?? 0,
+        totalRemindersSent: totalReminders,
+      },
+    };
+
+    await Settings.set('adminStatsCache', { data, cachedAt: Date.now() });
+    res.json({ ...data, fromCache: false, cachedAt: Date.now() });
+  } catch (err) {
+    console.error('[admin/stats]', err);
+    res.status(500).json({ message: 'Error al obtener estadísticas' });
+  }
 });
 
 // ─── CRON JOBS ────────────────────────────────────────────

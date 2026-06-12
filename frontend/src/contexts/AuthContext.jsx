@@ -47,14 +47,23 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  useEffect(() => { 
+  useEffect(() => {
     fetchMe().catch((error) => {
-      // On initial load, silently fail for network errors
-      // Token was already cleared if it was a 401
       if (error.response?.status !== 401) {
         console.warn('[AuthContext] Initial auth check failed, will retry on next interaction')
       }
     })
+  }, [fetchMe])
+
+  // Re-fetch user when tab becomes visible (e.g. coming back from another tab)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && localStorage.getItem('wc_token')) {
+        fetchMe().catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [fetchMe])
 
   const login = async (nickname, password) => {
@@ -103,7 +112,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, loginWithToken, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, loginWithToken, setUser, refreshUser: fetchMe }}>
       {children}
     </AuthContext.Provider>
   )

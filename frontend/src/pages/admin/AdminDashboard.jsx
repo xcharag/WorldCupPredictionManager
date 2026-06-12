@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { BarChart3, Swords, Users, ShieldCheck, Trophy, Settings, Timer, Mail, Unlock } from 'lucide-react'
 
 const SECTIONS = [
+  { icon: BarChart3, label: 'Estadísticas', desc: 'Usuarios, engagement y actividad', to: '/admin/stats', color: 'text-brand-primary' },
   { icon: Swords, label: 'Partidos', desc: 'Gestionar calendario y resultados', to: '/admin/matches', color: 'text-brand-accent' },
   { icon: Users, label: 'Equipos', desc: 'Gestionar equipos del Mundial', to: '/admin/teams', color: 'text-blue-400' },
   { icon: ShieldCheck, label: 'Plantillas', desc: 'Gestionar jugadores por equipo', to: '/admin/rosters', color: 'text-purple-400' },

@@ -69,9 +69,11 @@ router.post(
 
 // POST /api/auth/login
 router.post('/login', (req, res, next) => {
-  passport.authenticate('local', { session: false }, (err, user, info) => {
+  passport.authenticate('local', { session: false }, async (err, user, info) => {
     if (err) return next(err);
     if (!user) return res.status(401).json({ message: info?.message || 'Invalid credentials' });
+
+    User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() }, $inc: { loginCount: 1 } }).catch(() => {});
 
     const token = signToken(user._id);
     res.json({
@@ -107,11 +109,15 @@ router.get('/verify-email', async (req, res) => {
 
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ message: 'El email es requerido' });
+  const { email, identifier } = req.body;
+  const input = (identifier || email || '').trim().toLowerCase();
+  if (!input) return res.status(400).json({ message: 'El email o nickname es requerido' });
 
   try {
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+    const isEmail = input.includes('@');
+    const user = await User.findOne(
+      isEmail ? { email: input } : { nickname: { $regex: `^${input}$`, $options: 'i' } }
+    ).select('+password');
 
     // Always respond the same way to avoid email enumeration
     if (!user || (!user.password && user.googleId)) {
@@ -180,6 +186,7 @@ router.get('/google/callback', (req, res, next) => {
     }
     
     try {
+      User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() }, $inc: { loginCount: 1 } }).catch(() => {});
       const token = signToken(user._id);
       console.log(`[Google OAuth] Success for user: ${user.email} (${user._id})`);
       res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);

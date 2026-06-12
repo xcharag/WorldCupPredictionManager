@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import api from '../services/api'
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -13,7 +13,7 @@ export default function ForgotPassword() {
     setError('')
     setLoading(true)
     try {
-      await api.post('/auth/forgot-password', { email })
+      await api.post('/auth/forgot-password', { identifier })
       setSent(true)
     } catch (err) {
       setError(err.response?.data?.message || 'Error al enviar el email')
@@ -46,7 +46,7 @@ export default function ForgotPassword() {
       <div className="flex-1 px-5 pb-8 max-w-md mx-auto w-full">
         <h2 className="text-xl font-bold mt-6 mb-1">¿Olvidaste tu contraseña?</h2>
         <p className="text-brand-muted text-sm mb-6">
-          Ingresá tu email y te enviamos un enlace para restablecerla.
+          Ingresá tu email o nickname y te enviamos un enlace para restablecerla.
         </p>
 
         {sent ? (
@@ -67,15 +67,15 @@ export default function ForgotPassword() {
             )}
 
             <div>
-              <label className="label">Email</label>
+              <label className="label">Email o nickname</label>
               <input
                 className="input"
-                type="email"
-                placeholder="tu@email.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                type="text"
+                placeholder="tu@email.com o tunickname"
+                value={identifier}
+                onChange={e => setIdentifier(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="username"
                 autoCapitalize="none"
               />
             </div>
