@@ -162,7 +162,8 @@ async function syncLiveMatches() {
         );
       }
 
-      if (!wasFinished && newStatus === 'finished') {
+      const scoresJustArrived = match.status === 'finished' && oldHome == null && match.homeScore != null;
+      if ((!wasFinished && newStatus === 'finished') || scoresJustArrived) {
         try {
           await calculateMatchPredictions(match._id);
           console.log(`[Scheduler] Scored predictions for match ${match._id}`);
@@ -183,7 +184,7 @@ async function syncLiveMatches() {
 
     for (const match of stale) {
       try {
-        const { match: apiMatch } = await fd.getMatch(match.footballDataId);
+        const apiMatch = await fd.getMatch(match.footballDataId);
         const newStatus = mapFdStatus(apiMatch.status);
         const score = apiMatch.score?.fullTime;
         const wasFinished = match.status === 'finished';
@@ -203,7 +204,8 @@ async function syncLiveMatches() {
           );
         }
 
-        if (!wasFinished && newStatus === 'finished') {
+        const scoresJustArrived = match.status === 'finished' && oldHome == null && match.homeScore != null;
+        if ((!wasFinished && newStatus === 'finished') || scoresJustArrived) {
           try {
             await calculateMatchPredictions(match._id);
             console.log(`[Scheduler] Scored predictions for match ${match._id}`);

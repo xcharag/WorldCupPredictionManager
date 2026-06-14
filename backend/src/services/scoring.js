@@ -53,7 +53,7 @@ function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway) {
 // Calculate & save points for all predictions of a finished match
 async function calculateMatchPredictions(matchId) {
   const match = await Match.findById(matchId);
-  if (!match || match.status !== 'finished' || match.homeScore === null) {
+  if (!match || match.status !== 'finished' || match.homeScore == null || match.awayScore == null) {
     throw new Error('Match not finished or missing score');
   }
 
