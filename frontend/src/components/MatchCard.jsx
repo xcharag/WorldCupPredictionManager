@@ -43,12 +43,22 @@ function TeamBlock({ team, score, side }) {
   )
 }
 
+function liveClock(match) {
+  if (match.minute == null) return null
+  return match.injuryTime ? `${match.minute}+${match.injuryTime}'` : `${match.minute}'`
+}
+
 export default function MatchCard({ match, prediction, onClick, showPrediction = false }) {
   const isFinished = match.status === 'finished'
   const hasScore = match.homeScore !== null && match.homeScore !== undefined
+  const hasAet = match.extraTimeHomeScore != null && match.extraTimeAwayScore != null
+  const hasPens = match.penaltyHomeScore != null && match.penaltyAwayScore != null
+  const displayHome = hasAet ? match.extraTimeHomeScore : match.homeScore
+  const displayAway = hasAet ? match.extraTimeAwayScore : match.awayScore
   const isLocked =
     match.status !== 'scheduled' ||
     (match.matchDate && new Date(match.matchDate).getTime() <= Date.now())
+  const clock = match.status === 'in_progress' ? liveClock(match) : null
 
   return (
     <button
@@ -63,7 +73,7 @@ export default function MatchCard({ match, prediction, onClick, showPrediction =
       <div className="flex items-center justify-between mb-3">
         <span className={`badge ${STATUS_CLASS[match.status] || 'badge-gray'} capitalize`}>
           {match.status === 'in_progress'
-            ? 'En juego'
+            ? (clock ? `En juego · ${clock}` : 'En juego')
             : match.status === 'scheduled'
             ? 'Programado'
             : 'Finalizado'}
@@ -76,12 +86,19 @@ export default function MatchCard({ match, prediction, onClick, showPrediction =
 
       {/* Teams & Score */}
       <div className="flex items-center gap-2">
-        <TeamBlock team={match.homeTeam} score={hasScore ? match.homeScore : undefined} side="home" />
+        <TeamBlock team={match.homeTeam} score={hasScore ? displayHome : undefined} side="home" />
         <div className="text-brand-muted font-bold text-sm flex-shrink-0 w-8 text-center">
           {isFinished && hasScore ? '' : '-'}
         </div>
-        <TeamBlock team={match.awayTeam} score={hasScore ? match.awayScore : undefined} side="away" />
+        <TeamBlock team={match.awayTeam} score={hasScore ? displayAway : undefined} side="away" />
       </div>
+
+      {(hasAet || hasPens) && (
+        <p className="text-[11px] text-brand-muted mt-1 text-center">
+          {hasAet && `(${match.homeScore}–${match.awayScore} en 90min)`}
+          {hasPens && ` · Penales ${match.penaltyHomeScore}–${match.penaltyAwayScore}`}
+        </p>
+      )}
 
       {/* Date */}
       <p className="text-xs text-brand-muted mt-2 text-center">

@@ -16,6 +16,42 @@ const { sendDailyPushReminders, sendMatchStartPushReminders, sendGoalNotificatio
 // Cron runs every 5 min, so ±4 min window catches every match.
 const WINDOW_MS = 4 * 60 * 1000;
 
+const FD_WINNER_MAP = { HOME_TEAM: 'home', AWAY_TEAM: 'away' };
+const FD_DURATION_MAP = { REGULAR: 'regular_time', EXTRA_TIME: 'extra_time', PENALTY_SHOOTOUT: 'penalties' };
+
+// Applies football-data.org's live state onto a match: clock, regulation score,
+// extra-time/penalty scores (knockout only) and the final winner/decidedBy.
+// Returns whether a real goal (regular time or extra time) was just scored, so
+// the caller can fire a goal notification — penalty-shootout kicks don't count.
+function applyFdUpdate(match, apiMatch) {
+  const score = apiMatch.score || {};
+  const fullTime = score.fullTime || {};
+  const extraTime = score.extraTime || {};
+  const penalties = score.penalties || {};
+
+  const oldLiveHome = match.extraTimeHomeScore ?? match.homeScore;
+  const oldLiveAway = match.extraTimeAwayScore ?? match.awayScore;
+
+  match.status = mapFdStatus(apiMatch.status);
+  match.minute = apiMatch.minute ?? match.minute;
+  match.injuryTime = apiMatch.injuryTime ?? match.injuryTime;
+
+  if (fullTime.home != null) match.homeScore = fullTime.home;
+  if (fullTime.away != null) match.awayScore = fullTime.away;
+  if (extraTime.home != null) match.extraTimeHomeScore = extraTime.home;
+  if (extraTime.away != null) match.extraTimeAwayScore = extraTime.away;
+  if (penalties.home != null) match.penaltyHomeScore = penalties.home;
+  if (penalties.away != null) match.penaltyAwayScore = penalties.away;
+
+  if (score.winner in FD_WINNER_MAP) match.winner = FD_WINNER_MAP[score.winner];
+  if (score.duration in FD_DURATION_MAP) match.decidedBy = FD_DURATION_MAP[score.duration];
+
+  const newLiveHome = match.extraTimeHomeScore ?? match.homeScore;
+  const newLiveAway = match.extraTimeAwayScore ?? match.awayScore;
+  return (newLiveHome != null && newLiveHome > (oldLiveHome ?? -1)) ||
+         (newLiveAway != null && newLiveAway > (oldLiveAway ?? -1));
+}
+
 const TIMINGS = [
   { key: '24h', ms: 24 * 60 * 60 * 1000 },
   { key: '6h',  ms:  6 * 60 * 60 * 1000 },
@@ -162,21 +198,16 @@ async function syncLiveMatches() {
         .populate('awayTeam', 'shortName');
       if (!match) continue;
 
-      const newStatus = mapFdStatus(apiMatch.status);
-      const score = apiMatch.score?.fullTime;
       const wasFinished = match.status === 'finished';
       const oldHome = match.homeScore;
-      const oldAway = match.awayScore;
 
-      match.status = newStatus;
-      if (score?.home != null) match.homeScore = score.home;
-      if (score?.away != null) match.awayScore = score.away;
+      const goalScored = applyFdUpdate(match, apiMatch);
+      const newStatus = match.status;
       await match.save();
       updated++;
 
-      // Notify on goal: score increased compared to what was stored
-      if ((score?.home != null && score.home > (oldHome ?? -1)) ||
-          (score?.away != null && score.away > (oldAway ?? -1))) {
+      // Notify on goal (regular or extra time — penalty kicks don't count)
+      if (goalScored) {
         sendGoalNotification(match).catch(e =>
           console.error(`[Scheduler] Goal notification failed for match ${match._id}:`, e.message)
         );
@@ -206,20 +237,15 @@ async function syncLiveMatches() {
     for (const match of stale) {
       try {
         const apiMatch = await fd.getMatch(match.footballDataId);
-        const newStatus = mapFdStatus(apiMatch.status);
-        const score = apiMatch.score?.fullTime;
         const wasFinished = match.status === 'finished';
         const oldHome = match.homeScore;
-        const oldAway = match.awayScore;
 
-        match.status = newStatus;
-        if (score?.home != null) match.homeScore = score.home;
-        if (score?.away != null) match.awayScore = score.away;
+        const goalScored = applyFdUpdate(match, apiMatch);
+        const newStatus = match.status;
         await match.save();
         updated++;
 
-        if ((score?.home != null && score.home > (oldHome ?? -1)) ||
-            (score?.away != null && score.away > (oldAway ?? -1))) {
+        if (goalScored) {
           sendGoalNotification(match).catch(e =>
             console.error(`[Scheduler] Goal notification failed for match ${match._id}:`, e.message)
           );

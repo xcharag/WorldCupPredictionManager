@@ -8,6 +8,11 @@
  *   - Both team scores correct: +2 bonus (replaces one-team bonus)
  *   Perfect = 2 + 1 + 2 = 5 points
  *
+ *   Knockout draws: real knockout matches always need a winner, so when a user
+ *   predicts a 90-min draw they also pick who wins in extra time/penalties.
+ *   +2 bonus if that pick matches the match's actual winner — on top of the
+ *   regular score points above (so a perfectly predicted knockout draw = 5 + 2 = 7).
+ *
  * Tournament scoring:
  *   - Champion: +50
  *   - Runner-up: +30
@@ -28,7 +33,7 @@ function getOutcome(home, away) {
   return 'draw';
 }
 
-function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway) {
+function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway, predictedWinner, actualWinner) {
   let points = 0;
 
   const predictedOutcome = getOutcome(predictedHome, predictedAway);
@@ -47,6 +52,11 @@ function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway) {
     points += 1; // +1 one team correct
   }
 
+  // Knockout draw: +2 if the chosen winner (extra time/penalties) matches the real one
+  if (predictedHome === predictedAway && actualWinner && predictedWinner === actualWinner) {
+    points += 2;
+  }
+
   return points;
 }
 
@@ -59,7 +69,11 @@ async function calculateMatchPredictions(matchId) {
 
   const predictions = await MatchPrediction.find({ match: matchId });
   const updates = predictions.map((p) => {
-    const pts = calcMatchPoints(p.predictedHomeScore, p.predictedAwayScore, match.homeScore, match.awayScore);
+    const pts = calcMatchPoints(
+      p.predictedHomeScore, p.predictedAwayScore,
+      match.homeScore, match.awayScore,
+      p.predictedWinner, match.winner
+    );
     return MatchPrediction.findByIdAndUpdate(p._id, { points: pts });
   });
 

@@ -610,14 +610,28 @@ router.post('/matches/bulk', async (req, res) => {
 // PUT /api/admin/matches/:id/result — set match result
 router.put('/matches/:id/result', async (req, res) => {
   try {
-    const { homeScore, awayScore, status } = req.body;
+    const { homeScore, awayScore, status, winner, decidedBy } = req.body;
     if (homeScore === undefined || awayScore === undefined) {
       return res.status(400).json({ message: 'homeScore and awayScore required' });
     }
 
+    const existing = await Match.findById(req.params.id).select('stage');
+    if (!existing) return res.status(404).json({ message: 'Match not found' });
+
+    const isKnockoutDraw = existing.stage !== 'group_stage' && Number(homeScore) === Number(awayScore);
+    if (isKnockoutDraw && (!['home', 'away'].includes(winner) || !['extra_time', 'penalties'].includes(decidedBy))) {
+      return res.status(400).json({ message: 'En un empate de eliminacion directa, indica quien gano y como se definio (tiempo extra o penales).' });
+    }
+
     const match = await Match.findByIdAndUpdate(
       req.params.id,
-      { homeScore: Number(homeScore), awayScore: Number(awayScore), status: status || 'finished' },
+      {
+        homeScore: Number(homeScore),
+        awayScore: Number(awayScore),
+        status: status || 'finished',
+        winner: isKnockoutDraw ? winner : null,
+        decidedBy: isKnockoutDraw ? decidedBy : null,
+      },
       { new: true }
     ).populate('homeTeam awayTeam', 'name shortName flag');
 

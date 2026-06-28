@@ -228,7 +228,9 @@ async function sendGoalNotification(match) {
 
   const home = match.homeTeam?.shortName || '?';
   const away = match.awayTeam?.shortName || '?';
-  const scoreStr = `${match.homeScore ?? 0}–${match.awayScore ?? 0}`;
+  const liveHome = match.extraTimeHomeScore ?? match.homeScore ?? 0;
+  const liveAway = match.extraTimeAwayScore ?? match.awayScore ?? 0;
+  const scoreStr = `${liveHome}–${liveAway}`;
 
   const users = await User.find({
     pushNotificationsEnabled: true,

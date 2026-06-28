@@ -57,10 +57,16 @@ export default function AdminResults() {
     if (homeScore === undefined || homeScore === '' || awayScore === undefined || awayScore === '') {
       addToast('Ingresa ambos marcadores', 'error'); return
     }
+    const isKnockoutDraw = match.stage !== 'group_stage' && Number(homeScore) === Number(awayScore)
+    if (isKnockoutDraw && (!form.winner || !form.decidedBy)) {
+      addToast('Es eliminacion directa: indica quien gano y como se definio', 'error'); return
+    }
     setSaving(s => ({ ...s, [match._id]: true }))
     try {
       const { data } = await api.put(`/admin/matches/${match._id}/result`, {
         homeScore: Number(homeScore), awayScore: Number(awayScore), status: 'finished',
+        winner: isKnockoutDraw ? form.winner : null,
+        decidedBy: isKnockoutDraw ? form.decidedBy : null,
       })
       setMatches(m => m.map(x => x._id === match._id ? data : x))
       addToast('Resultado guardado y puntos actualizados', 'success')
@@ -96,6 +102,8 @@ export default function AdminResults() {
           const rf = resultForms[match._id] || {}
           const homeVal = rf.homeScore !== undefined ? rf.homeScore : (match.homeScore ?? '')
           const awayVal = rf.awayScore !== undefined ? rf.awayScore : (match.awayScore ?? '')
+          const isKnockoutDraw = match.status !== 'finished' && match.stage !== 'group_stage' &&
+            homeVal !== '' && awayVal !== '' && Number(homeVal) === Number(awayVal)
           return (
             <div key={match._id} className="card">
               <p className="text-xs text-brand-muted mb-2 capitalize">{match.stage?.replace(/_/g,' ')}{match.group && ` · Group ${match.group}`}</p>
@@ -114,6 +122,31 @@ export default function AdminResults() {
                   {match.awayTeam?.flag} {match.awayTeam?.shortName || 'Por definir'}
                 </span>
               </div>
+              {isKnockoutDraw && (
+                <div className="mt-3 border-t border-brand-border pt-3">
+                  <p className="text-xs text-brand-muted mb-1">Se definio por</p>
+                  <div className="flex gap-2 mb-2">
+                    {[{ key: 'extra_time', label: 'Tiempo extra' }, { key: 'penalties', label: 'Penales' }].map(({ key, label }) => (
+                      <button key={key} type="button" onClick={() => setResult(match._id, 'decidedBy', key)}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${rf.decidedBy === key ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-brand-muted mb-1">Ganador</p>
+                  <div className="flex gap-2">
+                    {[
+                      { key: 'home', label: match.homeTeam?.shortName || 'Local' },
+                      { key: 'away', label: match.awayTeam?.shortName || 'Visitante' },
+                    ].map(({ key, label }) => (
+                      <button key={key} type="button" onClick={() => setResult(match._id, 'winner', key)}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${rf.winner === key ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {match.status !== 'finished' && (
                 <button onClick={() => saveResult(match)} disabled={saving[match._id]}
                   className="btn-primary mt-3 flex items-center justify-center gap-1">

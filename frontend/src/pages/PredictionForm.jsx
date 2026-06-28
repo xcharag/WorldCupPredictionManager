@@ -27,6 +27,8 @@ export default function PredictionForm() {
   const [prediction, setPrediction] = useState(null)
   const [homeScore, setHomeScore] = useState('')
   const [awayScore, setAwayScore] = useState('')
+  const [predictedWinner, setPredictedWinner] = useState(null)
+  const [predictedDecidedBy, setPredictedDecidedBy] = useState(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -40,9 +42,15 @@ export default function PredictionForm() {
         setPrediction(predRes.data)
         setHomeScore(String(predRes.data.predictedHomeScore))
         setAwayScore(String(predRes.data.predictedAwayScore))
+        setPredictedWinner(predRes.data.predictedWinner || null)
+        setPredictedDecidedBy(predRes.data.predictedDecidedBy || null)
       }
     }).finally(() => setLoading(false))
   }, [matchId])
+
+  const isKnockout = match?.stage && match.stage !== 'group_stage'
+  const isTie = homeScore !== '' && awayScore !== '' && Number(homeScore) === Number(awayScore)
+  const needsWinnerPick = isKnockout && isTie
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -52,6 +60,8 @@ export default function PredictionForm() {
         matchId,
         predictedHomeScore: Number(homeScore),
         predictedAwayScore: Number(awayScore),
+        predictedWinner: needsWinnerPick ? predictedWinner : null,
+        predictedDecidedBy: needsWinnerPick ? predictedDecidedBy : null,
       })
       setPrediction(res.data)
       celebratePredictionSaved()
@@ -173,10 +183,15 @@ export default function PredictionForm() {
 
         {/* Stage / round pill */}
         {match.stage && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
             <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-white/10 backdrop-blur-sm text-white/80">
               {STAGE_LABELS[match.stage] || match.stage}
             </span>
+            {match.status === 'in_progress' && match.minute != null && (
+              <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-red-600/80 text-white animate-pulse">
+                {match.injuryTime ? `${match.minute}+${match.injuryTime}'` : `${match.minute}'`}
+              </span>
+            )}
           </div>
         )}
 
@@ -232,6 +247,21 @@ export default function PredictionForm() {
           </div>
         </div>
 
+        {/* Live / final score */}
+        {(match.status === 'in_progress' || match.status === 'finished') && match.homeScore != null && (
+          <div className="relative z-10 text-center max-w-md mx-auto pb-2">
+            <p className="text-white font-bold text-lg">
+              {match.extraTimeHomeScore ?? match.homeScore}–{match.extraTimeAwayScore ?? match.awayScore}
+            </p>
+            {(match.extraTimeHomeScore != null || match.penaltyHomeScore != null) && (
+              <p className="text-white/50 text-[11px]">
+                {match.extraTimeHomeScore != null && `${match.homeScore}–${match.awayScore} en 90min`}
+                {match.penaltyHomeScore != null && ` · Penales ${match.penaltyHomeScore}–${match.penaltyAwayScore}`}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Date & venue */}
         <div className="relative z-10 pb-5 text-center max-w-md mx-auto">
           {dateStr && <p className="text-white/70 text-xs capitalize">{dateStr}</p>}
@@ -255,6 +285,12 @@ export default function PredictionForm() {
                 <p className="text-3xl font-bold text-brand-accent">
                   {prediction.predictedHomeScore} – {prediction.predictedAwayScore}
                 </p>
+                {prediction.predictedWinner && (
+                  <p className="text-xs text-brand-muted mt-2">
+                    Ganador elegido: {prediction.predictedWinner === 'home' ? (homeTeam?.shortName || 'Local') : (awayTeam?.shortName || 'Visitante')}
+                    {' '}({prediction.predictedDecidedBy === 'penalties' ? 'penales' : 'tiempo extra'})
+                  </p>
+                )}
                 {prediction.points !== null && (
                   <p className="text-brand-primary font-semibold mt-1">+{prediction.points} puntos</p>
                 )}
@@ -291,7 +327,7 @@ export default function PredictionForm() {
             {/* Outcome preview */}
             {homeScore !== '' && awayScore !== '' && (
               <div className="card mb-4 text-center">
-                <p className="text-xs text-brand-muted mb-1">Resultado esperado</p>
+                <p className="text-xs text-brand-muted mb-1">Resultado esperado (90 min)</p>
                 <p className="font-semibold">
                   {Number(homeScore) > Number(awayScore)
                     ? `Gana ${homeTeam?.shortName || 'local'}`
@@ -302,7 +338,50 @@ export default function PredictionForm() {
               </div>
             )}
 
-            <button type="submit" className="btn-primary" disabled={saving || homeScore === '' || awayScore === ''}>
+            {/* Knockout draw — must pick who advances and how */}
+            {needsWinnerPick && (
+              <div className="card mb-4">
+                <p className="text-sm font-semibold mb-1">Es eliminacion directa: tiene que haber un ganador</p>
+                <p className="text-xs text-brand-muted mb-3">Elegi como se define y quien gana. Si aciertas, +2 puntos extra.</p>
+
+                <p className="text-xs text-brand-muted mb-1">Se define por</p>
+                <div className="flex gap-2 mb-3">
+                  {[
+                    { key: 'extra_time', label: 'Tiempo extra' },
+                    { key: 'penalties', label: 'Penales' },
+                  ].map(({ key, label }) => (
+                    <button key={key} type="button"
+                      onClick={() => setPredictedDecidedBy(key)}
+                      className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                        predictedDecidedBy === key ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted'
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-xs text-brand-muted mb-1">Ganador</p>
+                <div className="flex gap-2">
+                  {[
+                    { key: 'home', label: homeTeam?.shortName || 'Local' },
+                    { key: 'away', label: awayTeam?.shortName || 'Visitante' },
+                  ].map(({ key, label }) => (
+                    <button key={key} type="button"
+                      onClick={() => setPredictedWinner(key)}
+                      className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                        predictedWinner === key ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted'
+                      }`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button type="submit" className="btn-primary" disabled={
+              saving || homeScore === '' || awayScore === '' ||
+              (needsWinnerPick && (!predictedWinner || !predictedDecidedBy))
+            }>
               {saving ? 'Guardando...' : prediction ? 'Actualizar pronostico' : 'Guardar pronostico'}
             </button>
           </form>

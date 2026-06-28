@@ -26,12 +26,14 @@ router.post(
     body('matchId').notEmpty(),
     body('predictedHomeScore').isInt({ min: 0 }),
     body('predictedAwayScore').isInt({ min: 0 }),
+    body('predictedWinner').optional({ nullable: true }).isIn(['home', 'away']),
+    body('predictedDecidedBy').optional({ nullable: true }).isIn(['extra_time', 'penalties']),
   ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const { matchId, predictedHomeScore, predictedAwayScore } = req.body;
+    const { matchId, predictedHomeScore, predictedAwayScore, predictedWinner, predictedDecidedBy } = req.body;
 
     try {
       const match = await Match.findById(matchId);
@@ -43,9 +45,23 @@ router.post(
         return res.status(400).json({ message: 'No podes modificar una prediccion de un partido pasado o finalizado.' });
       }
 
+      // Knockout matches always need a winner — if the user predicts a draw,
+      // they must also pick who advances (and how) in extra time/penalties.
+      const isKnockoutDraw = match.stage !== 'group_stage' &&
+        Number(predictedHomeScore) === Number(predictedAwayScore);
+      if (isKnockoutDraw && (!predictedWinner || !predictedDecidedBy)) {
+        return res.status(400).json({ message: 'En un empate de eliminacion directa, elegi quien gana y como se define.' });
+      }
+
       const prediction = await MatchPrediction.findOneAndUpdate(
         { user: req.user._id, group: null, match: matchId },
-        { predictedHomeScore: Number(predictedHomeScore), predictedAwayScore: Number(predictedAwayScore), points: null },
+        {
+          predictedHomeScore: Number(predictedHomeScore),
+          predictedAwayScore: Number(predictedAwayScore),
+          predictedWinner: isKnockoutDraw ? predictedWinner : null,
+          predictedDecidedBy: isKnockoutDraw ? predictedDecidedBy : null,
+          points: null,
+        },
         { upsert: true, new: true, runValidators: true }
       );
 
