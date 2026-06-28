@@ -41,4 +41,13 @@ async function checkAndBustCache() {
       <App />
     </React.StrictMode>
   )
+
+  // Installed PWAs can stay open (or suspended in background) for days, so the
+  // one-shot check on cold start isn't enough to force a deploy out to them.
+  // Re-check whenever the app regains focus and on an interval while it's open.
+  // This only swaps the SW cache + reloads — localStorage (auth token) is untouched.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkAndBustCache()
+  })
+  setInterval(checkAndBustCache, 5 * 60 * 1000)
 })()
