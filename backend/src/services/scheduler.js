@@ -8,6 +8,7 @@ const MatchReminder = require('../models/MatchReminder');
 const { sendMatchReminderEmail } = require('./email');
 const fd = require('./footballdata');
 const { calculateMatchPredictions } = require('./scoring');
+const { syncKnockoutBracket } = require('./knockoutSync');
 const cl = require('./cronLogger');
 const { sendDailyPushReminders, sendMatchStartPushReminders, sendGoalNotification } = require('./pushNotifications');
 
@@ -104,6 +105,25 @@ function normPos(apiPos) { return POSITION_MAP[apiPos] || 'MID'; }
 // Rate: 1 bulk + 0-5 individual calls per run, well within 20 req/min.
 let _syncRunning = false;
 
+// Fire-and-forget knockout bracket resync, scheduled a few minutes after a
+// match is scored as finished — football-data.org needs a little time to
+// resolve TBD slots in the next round once the deciding result lands, so we
+// don't query it the instant the match ends. Guarded so several matches
+// finishing close together only schedule one pending sync.
+const KNOCKOUT_SYNC_DELAY_MS = 5 * 60 * 1000;
+let _knockoutSyncTimer = null;
+function triggerKnockoutSync() {
+  if (_knockoutSyncTimer) return;
+  _knockoutSyncTimer = setTimeout(() => {
+    _knockoutSyncTimer = null;
+    syncKnockoutBracket()
+      .then((result) => {
+        if (result) console.log(`[Scheduler] Knockout bracket sync (post-match): ${result}`);
+      })
+      .catch((e) => console.error('[Scheduler] Post-match knockout sync failed:', e.message));
+  }, KNOCKOUT_SYNC_DELAY_MS);
+}
+
 async function syncLiveMatches() {
   if (!process.env.FOOTBALL_DATA_API_KEY) return null;
   if (_syncRunning) return 'skipped (previous run still active)';
@@ -170,6 +190,7 @@ async function syncLiveMatches() {
         } catch (e) {
           console.error(`[Scheduler] Scoring error for match ${match._id}:`, e.message);
         }
+        triggerKnockoutSync();
       }
     }
 
@@ -212,6 +233,7 @@ async function syncLiveMatches() {
           } catch (e) {
             console.error(`[Scheduler] Scoring error for match ${match._id}:`, e.message);
           }
+          triggerKnockoutSync();
         }
       } catch (err) {
         console.error(`[Scheduler] Individual update failed for match ${match._id}:`, err.message);
@@ -341,6 +363,7 @@ function startScheduler() {
   cl.register('plantillas',     '0 * * * *',   'Actualiza plantillas de equipos desde football-data.org');
   cl.register('posiciones',     '0 * * * *',   'Sincroniza posiciones del torneo desde football-data.org');
   cl.register('limpieza-logs',  '30 2 * * *',  'Elimina logs de MinIO con más de 7 días');
+  cl.register('bracket-knockout', '0 5 * * *', 'Sincroniza equipos resueltos del cuadro eliminatorio desde football-data.org');
   cl.register('push-manana',    '0 11 * * *',  'Notificaciones push diarias (11:00 UTC)');
   cl.register('push-tarde',     '30 17 * * *', 'Notificaciones push diarias (17:30 UTC)');
 
@@ -362,6 +385,13 @@ function startScheduler() {
   console.log('[Scheduler] Standings cron started (every 1 h)');
   // Warm the cache on startup so the first request never returns empty
   syncStandings().catch(e => console.warn('[Scheduler] Initial standings sync failed:', e.message));
+
+  // ── Knockout bracket sync (daily 05:00 UTC) ────────────────────────────────
+  // Catches any bracket resolution missed by the post-match trigger (API lag,
+  // restarts, etc). Also runs immediately after each match finishes — see
+  // triggerKnockoutSync() in syncLiveMatches above.
+  cron.schedule('0 5 * * *', cl.wrap('bracket-knockout', syncKnockoutBracket));
+  console.log('[Scheduler] Knockout bracket cron started (daily 05:00 UTC)');
 
   // ── Nightly log cleanup (02:30 UTC) ────────────────────────────────────────
   cron.schedule('30 2 * * *', cl.wrap('limpieza-logs', async () => {

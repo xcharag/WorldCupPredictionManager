@@ -93,6 +93,7 @@ function register(name, cronExpr, description) {
     running: false,
     lastRun: null,
     runCount: 0,
+    run:     null,     // set by wrap() — the runnable function, used by runNow()
   };
   ringBuf[name] = [];
 }
@@ -109,7 +110,7 @@ function register(name, cronExpr, description) {
  * @returns {Function}     New async function to pass to cron.schedule()
  */
 function wrap(name, fn) {
-  return async function () {
+  const wrapped = async function () {
     const job = registry[name];
     if (job) { job.running = true; job.status = 'running'; }
 
@@ -164,7 +165,27 @@ function wrap(name, fn) {
         );
       }
     }
+
+    return entry;
   };
+
+  if (registry[name]) registry[name].run = wrapped;
+  return wrapped;
+}
+
+/**
+ * Runs a registered job immediately, outside its cron schedule.
+ * Reuses the same wrapped function as the schedule so status/logs/MinIO
+ * persistence behave identically to a normal scheduled run.
+ * @param {string} name  Registered job name
+ * @returns {Promise<LogEntry>}
+ */
+async function runNow(name) {
+  const job = registry[name];
+  if (!job) throw new Error(`Unknown job: ${name}`);
+  if (!job.run) throw new Error(`Job "${name}" has no runnable function registered`);
+  if (job.running) throw new Error(`Job "${name}" is already running`);
+  return job.run();
 }
 
 // ── MinIO helpers ──────────────────────────────────────────────────────────────
@@ -291,4 +312,4 @@ function getMemoryLogs(jobName, limit = 50) {
   return all.slice(0, limit);
 }
 
-module.exports = { register, wrap, getJobs, getMemoryLogs, loadMinioLogs, cleanupOldLogs };
+module.exports = { register, wrap, runNow, getJobs, getMemoryLogs, loadMinioLogs, cleanupOldLogs };

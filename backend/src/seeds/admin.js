@@ -29,11 +29,20 @@ async function seed() {
     process.exit(1);
   }
 
-  const existing = await User.findOne({ email: ADMIN_EMAIL });
+  // Match by email OR nickname — either one may have drifted from .env
+  // independently, and the nickname index is unique so a stale match here
+  // would otherwise collide with the insert below.
+  const orClauses = [{ email: ADMIN_EMAIL }];
+  if (ADMIN_NICKNAME) orClauses.push({ nickname: ADMIN_NICKNAME.toLowerCase() });
+  const existing = await User.findOne({ $or: orClauses }).select('+password');
+
   if (existing) {
     existing.isAdmin = true;
+    existing.email = ADMIN_EMAIL;
+    if (ADMIN_NICKNAME) existing.nickname = ADMIN_NICKNAME;
+    existing.password = ADMIN_PASSWORD; // re-synced from .env on every run
     await existing.save();
-    console.log(`Admin flag set on existing user: ${existing.email}`);
+    console.log(`Admin synced from .env: ${existing.email} (nickname: ${existing.nickname}, password reset)`);
   } else {
     const admin = await User.create({
       name: ADMIN_NAME || 'Admin',

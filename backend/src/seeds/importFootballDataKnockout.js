@@ -1,13 +1,14 @@
 /**
  * Seed: importFootballDataKnockout.js
  *
- * Creates Match documents for WC 2026 knockout-stage fixtures (Round of 32,
+ * One-off CLI wrapper around services/knockoutSync.js — creates/updates
+ * Match documents for WC 2026 knockout-stage fixtures (Round of 32,
  * Round of 16, Quarter-Finals, Semi-Finals, Third-Place Play-off, Final)
  * imported from football-data.org.
  *
- * - If a team is already known (non-null TLA in the API), it is linked.
- * - If a team is TBD (null TLA), the homeTeam/awayTeam field is left unset.
- * - Matches already linked (footballDataId exists in DB) are skipped.
+ * The same sync logic runs automatically every day at 05:00 UTC and right
+ * after each match finishes (see services/scheduler.js) — run this script
+ * manually only if you need an immediate one-off sync.
  *
  * Run: node src/seeds/importFootballDataKnockout.js
  *
@@ -17,23 +18,7 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Match = require('../models/Match');
-const Team  = require('../models/Team');
-const { getWCMatches } = require('../services/footballdata');
-
-// ─── Stage mapping: football-data.org → app enum ─────────────────────────────
-const STAGE_MAP = {
-  GROUP_STAGE:    'group_stage',
-  LAST_32:        'round_of_32',
-  LAST_16:        'round_of_16',
-  QUARTER_FINALS: 'quarter_final',
-  SEMI_FINALS:    'semi_final',
-  THIRD_PLACE:    'third_place',
-  FINAL:          'final',
-};
-
-// TLA mismatches (same as in importFootballData.js)
-const TLA_REMAP = { URY: 'URU', SAU: 'KSA', DRC: 'COD' };
+const { syncKnockoutBracket } = require('../services/knockoutSync');
 
 function resolveDbName(uri) {
   try {
@@ -43,13 +28,6 @@ function resolveDbName(uri) {
   } catch {
     return process.env.MONGODB_DB || 'worldcup2026';
   }
-}
-
-async function resolveTeam(apiTeamObj) {
-  if (!apiTeamObj?.tla) return null;
-  const fifaCode = TLA_REMAP[apiTeamObj.tla] || apiTeamObj.tla;
-  const team = await Team.findOne({ fifaCode }).select('_id');
-  return team?._id || null;
 }
 
 async function run() {
@@ -66,57 +44,8 @@ async function run() {
   await mongoose.connect(process.env.MONGODB_URI, { dbName });
   console.log(`[KO Seed] Connected to MongoDB (${dbName})\n`);
 
-  console.log('[KO Seed] Fetching WC matches (1 API call)...');
-  const { matches: apiMatches } = await getWCMatches();
-
-  const knockoutMatches = apiMatches.filter((m) => m.stage !== 'GROUP_STAGE');
-  console.log(`[KO Seed] ${knockoutMatches.length} knockout matches found in API`);
-
-  const stageCounts = {};
-  let created = 0;
-  let skipped = 0;
-
-  for (const apiMatch of knockoutMatches) {
-    const stage = STAGE_MAP[apiMatch.stage];
-    if (!stage) {
-      console.warn(`[KO Seed] Unknown stage "${apiMatch.stage}" — skipping`);
-      skipped++;
-      continue;
-    }
-
-    // Skip if already linked to this football-data match ID
-    const exists = await Match.exists({ footballDataId: String(apiMatch.id) });
-    if (exists) {
-      skipped++;
-      continue;
-    }
-
-    // Try to resolve teams (they'll be null/TBD for most knockout fixtures pre-tournament)
-    const homeTeamId = await resolveTeam(apiMatch.homeTeam);
-    const awayTeamId = await resolveTeam(apiMatch.awayTeam);
-
-    const matchData = {
-      footballDataId: String(apiMatch.id),
-      matchDate:      new Date(apiMatch.utcDate),
-      stage,
-      status:         'scheduled',
-      venue:          apiMatch.venue || null,
-    };
-    if (homeTeamId) matchData.homeTeam = homeTeamId;
-    if (awayTeamId) matchData.awayTeam = awayTeamId;
-
-    await Match.create(matchData);
-    created++;
-    stageCounts[stage] = (stageCounts[stage] || 0) + 1;
-  }
-
-  console.log(`\n[KO Seed] Created: ${created}, Skipped (already exists): ${skipped}`);
-  if (Object.keys(stageCounts).length) {
-    console.log('[KO Seed] Breakdown:');
-    for (const [stage, count] of Object.entries(stageCounts)) {
-      console.log(`  ${stage}: ${count} matches`);
-    }
-  }
+  const result = await syncKnockoutBracket();
+  console.log(`[KO Seed] ${result || 'No changes — bracket already up to date'}`);
 
   await mongoose.disconnect();
   console.log('\n[KO Seed] Done.');

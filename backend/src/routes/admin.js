@@ -838,6 +838,16 @@ router.get('/cron/jobs', (_req, res) => {
   res.json(cl.getJobs());
 });
 
+// POST /api/admin/cron/jobs/:name/run — trigger a registered job immediately
+router.post('/cron/jobs/:name/run', async (req, res) => {
+  try {
+    const entry = await cl.runNow(req.params.name);
+    res.json(entry);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // GET /api/admin/cron/logs?job=name&limit=50&source=memory|minio
 router.get('/cron/logs', async (req, res) => {
   const { job = null, limit = '50', source = 'memory' } = req.query;

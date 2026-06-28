@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw, Clock, CheckCircle2, XCircle, Loader2, Archive } from 'lucide-react'
+import { RefreshCw, Clock, CheckCircle2, XCircle, Loader2, Archive, Play } from 'lucide-react'
 import api from '../../services/api'
 import PageHeader from '../../components/PageHeader'
 import LoadingSpinner from '../../components/LoadingSpinner'
+import { useToast, ToastContainer } from '../../components/Toast'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -62,51 +63,66 @@ function StatusBadge({ status }) {
 }
 
 // ── Job card ──────────────────────────────────────────────────────────────────
-function JobCard({ job, onSelectJob, isSelected }) {
+function JobCard({ job, onSelectJob, isSelected, onRunNow, isTriggering }) {
+  const busy = job.status === 'running' || isTriggering
+
   return (
-    <button
-      onClick={() => onSelectJob(isSelected ? null : job.name)}
+    <div
       className={[
         'card w-full text-left transition-all',
-        isSelected ? 'ring-2 ring-brand-primary' : 'active:bg-brand-elevated',
+        isSelected ? 'ring-2 ring-brand-primary' : '',
         job.status === 'error' ? 'border-red-500/40' : '',
         job.status === 'running' ? 'border-blue-500/40' : '',
       ].filter(Boolean).join(' ')}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <p className="font-semibold text-sm">{job.name}</p>
-          <p className="text-xs text-brand-muted mt-0.5">{job.description}</p>
+      <button
+        onClick={() => onSelectJob(isSelected ? null : job.name)}
+        className="w-full text-left active:opacity-80"
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div>
+            <p className="font-semibold text-sm">{job.name}</p>
+            <p className="text-xs text-brand-muted mt-0.5">{job.description}</p>
+          </div>
+          <StatusBadge status={job.status} />
         </div>
-        <StatusBadge status={job.status} />
-      </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <div>
-          <span className="text-brand-muted">Frecuencia</span>
-          <p className="font-medium">{job.scheduleLabel}</p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+          <div>
+            <span className="text-brand-muted">Frecuencia</span>
+            <p className="font-medium">{job.scheduleLabel}</p>
+          </div>
+          <div>
+            <span className="text-brand-muted">Siguiente</span>
+            <p className="font-medium">{timeUntil(job.nextRun)}</p>
+          </div>
+          <div>
+            <span className="text-brand-muted">Último</span>
+            <p className="font-medium">{timeAgo(job.lastRun?.startedAt)}</p>
+          </div>
+          <div>
+            <span className="text-brand-muted">Ejecuciones</span>
+            <p className="font-medium">{job.runCount}</p>
+          </div>
         </div>
-        <div>
-          <span className="text-brand-muted">Siguiente</span>
-          <p className="font-medium">{timeUntil(job.nextRun)}</p>
-        </div>
-        <div>
-          <span className="text-brand-muted">Último</span>
-          <p className="font-medium">{timeAgo(job.lastRun?.startedAt)}</p>
-        </div>
-        <div>
-          <span className="text-brand-muted">Ejecuciones</span>
-          <p className="font-medium">{job.runCount}</p>
-        </div>
-      </div>
 
-      {job.lastRun?.result && (
-        <p className="mt-2 text-xs text-green-400 truncate">↳ {job.lastRun.result}</p>
-      )}
-      {job.lastRun?.error && (
-        <p className="mt-2 text-xs text-red-400 truncate">⚠ {job.lastRun.error}</p>
-      )}
-    </button>
+        {job.lastRun?.result && (
+          <p className="mt-2 text-xs text-green-400 truncate">↳ {job.lastRun.result}</p>
+        )}
+        {job.lastRun?.error && (
+          <p className="mt-2 text-xs text-red-400 truncate">⚠ {job.lastRun.error}</p>
+        )}
+      </button>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); onRunNow(job.name) }}
+        disabled={busy}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-brand-elevated text-brand-text text-xs font-semibold active:bg-brand-border disabled:opacity-50"
+      >
+        {isTriggering ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+        {isTriggering ? 'Ejecutando…' : 'Ejecutar ahora'}
+      </button>
+    </div>
   )
 }
 
@@ -156,6 +172,8 @@ export default function AdminCron() {
   const [loading, setLoading]   = useState(true)
   const [logsLoading, setLogsLoading] = useState(false)
   const [lastRefresh, setLastRefresh] = useState(null)
+  const [triggering, setTriggering] = useState(null)
+  const { toasts, addToast, removeToast } = useToast()
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -190,10 +208,29 @@ export default function AdminCron() {
     return () => clearInterval(t)
   }, [fetchJobs])
 
+  const runNow = useCallback(async (name) => {
+    setTriggering(name)
+    try {
+      const { data } = await api.post(`/admin/cron/jobs/${name}/run`)
+      if (data.status === 'error') {
+        addToast(`${name}: ${data.error || 'Error'}`, 'error')
+      } else {
+        addToast(`${name} ejecutado${data.result ? ` — ${data.result}` : ''}`, 'success')
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || `Error al ejecutar ${name}`, 'error')
+    } finally {
+      setTriggering(null)
+      fetchJobs()
+      fetchLogs()
+    }
+  }, [addToast, fetchJobs, fetchLogs])
+
   if (loading) return <LoadingSpinner fullScreen />
 
   return (
     <div className="page max-w-md mx-auto pb-24">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <PageHeader
         title="Cron Jobs"
         onBack={() => navigate('/admin')}
@@ -229,6 +266,8 @@ export default function AdminCron() {
             job={j}
             isSelected={selectedJob === j.name}
             onSelectJob={setSelectedJob}
+            onRunNow={runNow}
+            isTriggering={triggering === j.name}
           />
         ))}
       </div>
