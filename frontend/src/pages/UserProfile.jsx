@@ -230,8 +230,13 @@ function PredictionCard({ pred }) {
   const isKnockoutDraw = isKnockout && match.homeScore === match.awayScore && match.winner
   const winnerCorrect = isKnockoutDraw && pred.predictedWinner === match.winner
 
+  const borderClass =
+    outcome.label === 'Perfecto' ? 'border-l-4 border-yellow-400' :
+    outcome.label === 'Exacto'   ? 'border-l-4 border-brand-primary' :
+    outcome.label.startsWith('Resultado') ? 'border-l-4 border-blue-400' : ''
+
   return (
-    <div className="card mb-3">
+    <div className={`card mb-3 ${borderClass}`}>
       {/* Stage + outcome */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] text-brand-muted uppercase tracking-wide font-semibold">
@@ -325,6 +330,19 @@ export default function UserProfile() {
       .finally(() => setLoading(false))
   }, [userId])
 
+  // Must be before early returns — hooks cannot be conditional
+  const predictions = data?.predictions || []
+
+  const filteredPredictions = useMemo(() => {
+    if (stageFilter === 'all') return predictions
+    return predictions.filter(p => p.match?.stage === stageFilter)
+  }, [predictions, stageFilter])
+
+  const availableStages = useMemo(() => {
+    const used = new Set(predictions.map(p => p.match?.stage).filter(Boolean))
+    return STAGE_FILTER_OPTIONS.filter(o => o.key === 'all' || used.has(o.key))
+  }, [predictions])
+
   if (loading) return (
     <div className="page max-w-md mx-auto">
       <PageHeader title="Perfil" />
@@ -349,20 +367,10 @@ export default function UserProfile() {
     </div>
   )
 
-  const { user, predictions, tournamentPrediction } = data
+  const { user, tournamentPrediction } = data
   const initials = user.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
   const ft = user.favoriteTeam
   const isMe = me?._id === userId
-
-  const filteredPredictions = useMemo(() => {
-    if (stageFilter === 'all') return predictions
-    return predictions.filter(p => p.match?.stage === stageFilter)
-  }, [predictions, stageFilter])
-
-  const availableStages = useMemo(() => {
-    const used = new Set(predictions.map(p => p.match?.stage).filter(Boolean))
-    return STAGE_FILTER_OPTIONS.filter(o => o.key === 'all' || used.has(o.key))
-  }, [predictions])
 
   return (
     <div className="page max-w-md mx-auto">
