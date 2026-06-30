@@ -139,18 +139,68 @@ function computeStats(predictions) {
   return { total: sorted.length, perfectos, exactos, resultadoGanador, resultado, fallidos, totalPoints, bestStreak, worstStreak }
 }
 
-function StatCell({ label, value, valueColor = 'text-brand-text' }) {
+const STAT_INFO = {
+  perfectos: {
+    title: 'Perfecto',
+    color: 'text-yellow-400',
+    desc: 'Acertaste el marcador exacto del partido Y elegiste correctamente el equipo que clasificó en una eliminatoria con empate en 90 min. Vale hasta 8 puntos (5 + 3 de bono).',
+  },
+  exactos: {
+    title: 'Exacto',
+    color: 'text-brand-primary',
+    desc: 'Acertaste el marcador exacto del partido. Incluye el +2 por resultado y el +1 de marcador correcto y el +2 de ambos goles correctos. Vale hasta 5 puntos.',
+  },
+  resultado: {
+    title: 'Resultado',
+    color: 'text-blue-400',
+    desc: 'Acertaste quién gana o que terminaría empatado en 90 min, pero no el marcador exacto. Aquí se agrupan también los que acertaron el ganador en eliminatoria. Vale +2 pts (o hasta +5 con el bono de ganador).',
+  },
+  fallidos: {
+    title: 'Fallido',
+    color: 'text-brand-muted',
+    desc: 'No acertaste el resultado del partido. 0 puntos.',
+  },
+  totalPoints: {
+    title: 'Puntos en partidos',
+    color: 'text-brand-primary',
+    desc: 'Suma total de puntos obtenidos en pronósticos de partidos ya finalizados. No incluye puntos del torneo (campeón, goleador, etc.).',
+  },
+  total: {
+    title: 'Total de pronósticos',
+    color: 'text-brand-text',
+    desc: 'Cantidad de partidos finalizados en los que hiciste un pronóstico.',
+  },
+  bestStreak: {
+    title: 'Racha correcta',
+    color: 'text-green-400',
+    desc: 'Mayor cantidad de partidos consecutivos donde acertaste el resultado (Perfecto, Exacto o Resultado). La racha se rompe con cualquier Fallido.',
+  },
+  worstStreak: {
+    title: 'Racha fallida',
+    color: 'text-red-400',
+    desc: 'Mayor cantidad de partidos consecutivos donde fallaste el resultado. La racha se rompe con cualquier acierto.',
+  },
+}
+
+function StatCell({ label, value, valueColor = 'text-brand-text', onClick, active }) {
   return (
-    <div className="flex flex-col items-center gap-0.5 py-2">
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center gap-0.5 py-2 w-full transition-colors active:bg-brand-elevated/50 ${active ? 'bg-brand-elevated/40' : ''}`}
+    >
       <span className={`text-xl font-extrabold leading-none ${valueColor}`}>{value}</span>
       <span className="text-[10px] text-brand-muted text-center leading-tight">{label}</span>
-    </div>
+    </button>
   )
 }
 
 function StatsCard({ predictions }) {
   const s = useMemo(() => computeStats(predictions), [predictions])
+  const [activeInfo, setActiveInfo] = useState(null)
   if (s.total === 0) return null
+
+  const toggle = (key) => setActiveInfo(prev => prev === key ? null : key)
+  const info = activeInfo ? STAT_INFO[activeInfo] : null
 
   return (
     <div className="card">
@@ -158,35 +208,49 @@ function StatsCard({ predictions }) {
 
       {/* Outcome breakdown — 3 cols */}
       <div className="grid grid-cols-3 divide-x divide-brand-border border border-brand-border rounded-xl mb-3">
-        <StatCell label="Perfectos" value={s.perfectos} valueColor="text-yellow-400" />
-        <StatCell label="Exactos" value={s.exactos} valueColor="text-brand-primary" />
-        <StatCell label="Resultado" value={s.resultado + s.resultadoGanador} valueColor="text-blue-400" />
+        <StatCell label="Perfectos" value={s.perfectos} valueColor="text-yellow-400" onClick={() => toggle('perfectos')} active={activeInfo === 'perfectos'} />
+        <StatCell label="Exactos" value={s.exactos} valueColor="text-brand-primary" onClick={() => toggle('exactos')} active={activeInfo === 'exactos'} />
+        <StatCell label="Resultado" value={s.resultado + s.resultadoGanador} valueColor="text-blue-400" onClick={() => toggle('resultado')} active={activeInfo === 'resultado'} />
       </div>
 
       {/* Second row — 3 cols */}
       <div className="grid grid-cols-3 divide-x divide-brand-border border border-brand-border rounded-xl mb-3">
-        <StatCell label="Fallidos" value={s.fallidos} valueColor="text-brand-muted" />
-        <StatCell label="Pts partidos" value={s.totalPoints} valueColor="text-brand-primary" />
-        <StatCell label="Total pred." value={s.total} />
+        <StatCell label="Fallidos" value={s.fallidos} valueColor="text-brand-muted" onClick={() => toggle('fallidos')} active={activeInfo === 'fallidos'} />
+        <StatCell label="Pts partidos" value={s.totalPoints} valueColor="text-brand-primary" onClick={() => toggle('totalPoints')} active={activeInfo === 'totalPoints'} />
+        <StatCell label="Total pred." value={s.total} onClick={() => toggle('total')} active={activeInfo === 'total'} />
       </div>
 
       {/* Streaks */}
       <div className="grid grid-cols-2 divide-x divide-brand-border border border-brand-border rounded-xl">
-        <div className="flex flex-col items-center gap-0.5 py-2 px-1">
+        <button
+          onClick={() => toggle('bestStreak')}
+          className={`flex flex-col items-center gap-0.5 py-2 px-1 w-full transition-colors active:bg-brand-elevated/50 ${activeInfo === 'bestStreak' ? 'bg-brand-elevated/40' : ''}`}
+        >
           <div className="flex items-center gap-1">
             <span className="text-xl font-extrabold text-green-400 leading-none">{s.bestStreak}</span>
             <span className="text-base">🔥</span>
           </div>
           <span className="text-[10px] text-brand-muted text-center leading-tight">Racha correcta más larga</span>
-        </div>
-        <div className="flex flex-col items-center gap-0.5 py-2 px-1">
+        </button>
+        <button
+          onClick={() => toggle('worstStreak')}
+          className={`flex flex-col items-center gap-0.5 py-2 px-1 w-full transition-colors active:bg-brand-elevated/50 ${activeInfo === 'worstStreak' ? 'bg-brand-elevated/40' : ''}`}
+        >
           <div className="flex items-center gap-1">
             <span className="text-xl font-extrabold text-red-400 leading-none">{s.worstStreak}</span>
             <span className="text-base">❄️</span>
           </div>
           <span className="text-[10px] text-brand-muted text-center leading-tight">Racha fallida más larga</span>
-        </div>
+        </button>
       </div>
+
+      {/* Inline info panel */}
+      {info && (
+        <div className={`mt-3 rounded-xl px-3 py-2.5 bg-brand-elevated border border-brand-border`}>
+          <p className={`text-xs font-bold mb-0.5 ${info.color}`}>{info.title}</p>
+          <p className="text-xs text-brand-muted leading-snug">{info.desc}</p>
+        </div>
+      )}
 
       {/* Accuracy bar */}
       {s.total > 0 && (() => {

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, BellOff, Camera, Check, LogOut, Moon, Smartphone, Sun, Users, UserPlus, X } from 'lucide-react'
+import { BarChart2, Bell, BellOff, Camera, Check, LogOut, Moon, Smartphone, Sun, Users, UserPlus, X } from 'lucide-react'
 import { isPushSupported, isIOSBrowser, subscribeToPush, unsubscribeFromPush, getCurrentSubscription } from '../utils/push'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
@@ -293,6 +293,18 @@ export default function Profile() {
             <p className="text-brand-muted text-xs mt-1">{user.email}</p>
           </div>
         </div>
+
+        {/* ── Ver estadísticas ───────────────────────── */}
+        <button
+          onClick={() => navigate(`/users/${user._id}`)}
+          className="card w-full flex items-center justify-between py-3 text-sm active:bg-brand-elevated transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <BarChart2 size={16} className="text-brand-primary" />
+            <span className="font-semibold">Ver mis estadísticas y pronósticos</span>
+          </div>
+          <span className="text-brand-muted text-lg">›</span>
+        </button>
 
         {/* ── Favorite team ──────────────────────────── */}
         <div className="card space-y-3">
