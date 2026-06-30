@@ -10,8 +10,8 @@
  *
  *   Knockout draws: real knockout matches always need a winner, so when a user
  *   predicts a 90-min draw they also pick who wins in extra time/penalties.
- *   +2 bonus if that pick matches the match's actual winner — on top of the
- *   regular score points above (so a perfectly predicted knockout draw = 5 + 2 = 7).
+ *   +3 bonus if that pick matches the match's actual winner — on top of the
+ *   regular score points above (so a perfectly predicted knockout draw = 5 + 3 = 8).
  *
  * Tournament scoring:
  *   - Champion: +50
@@ -52,7 +52,7 @@ function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway, p
     points += 1; // +1 one team correct
   }
 
-  // Knockout draw: +2 if the user predicted a draw AND the 90-min score was
+  // Knockout draw: +3 if the user predicted a draw AND the 90-min score was
   // also a draw AND their chosen winner matches the team that advanced.
   // actualHome === actualAway guards against applyFdUpdate setting match.winner
   // for regular-time wins, which would otherwise fire this bonus incorrectly.
@@ -62,7 +62,7 @@ function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway, p
     actualWinner &&
     predictedWinner === actualWinner
   ) {
-    points += 2;
+    points += 3;
   }
 
   return points;

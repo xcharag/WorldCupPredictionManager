@@ -372,6 +372,8 @@ export default function Home() {
               ['Un marcador correcto', '+1 bono'],
               ['Resultado Correcto', '+2 bono'],
               ['Pronostico perfecto', '= 5 pts'],
+              ['Ganador eliminatoria (empate en 90min)', '+3 bono'],
+              ['Pronostico perfecto + ganador', '= 8 pts'],
             ].map(([label, pts]) => (
               <div key={label} className="flex justify-between text-brand-muted">
                 <span>{label}</span>

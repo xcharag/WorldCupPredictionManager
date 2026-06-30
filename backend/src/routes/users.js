@@ -16,10 +16,11 @@ router.get('/:userId', protect, async (req, res) => {
 
     // Only expose predictions for finished matches
     const predictions = await MatchPrediction.find({ user: user._id, group: null })
+      .select('match predictedHomeScore predictedAwayScore predictedWinner predictedDecidedBy points')
       .populate({
         path: 'match',
         match: { status: 'finished' },
-        select: 'matchDate stage homeScore awayScore homeTeam awayTeam status',
+        select: 'matchDate stage group homeScore awayScore winner homeTeam awayTeam status',
         populate: [
           { path: 'homeTeam', select: 'name shortName flag badgeUrl' },
           { path: 'awayTeam', select: 'name shortName flag badgeUrl' },

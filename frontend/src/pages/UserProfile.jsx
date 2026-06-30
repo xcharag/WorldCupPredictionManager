@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { X, ChevronDown, ChevronUp } from 'lucide-react'
 import api from '../services/api'
@@ -89,10 +89,22 @@ function outcomeLabel(pred, match) {
   const predWinner = predHome > predAway ? 'home' : predHome < predAway ? 'away' : 'draw'
   const realWinner = realHome > realAway ? 'home' : realHome < realAway ? 'away' : 'draw'
 
-  if (predHome === realHome && predAway === realAway) return { label: 'Exacto', color: 'text-brand-primary bg-brand-primary/10' }
-  if (predWinner === realWinner) return { label: 'Resultado', color: 'text-blue-400 bg-blue-500/10' }
+  const exactScore = predHome === realHome && predAway === realAway
+  const correctWinner = predWinner === realWinner
+
+  // Knockout draw: user predicted a tie + winner, and the match was actually a draw in 90 min
+  const isKnockoutDraw = match.stage !== 'group_stage' && realHome === realAway && match.winner
+  const predictedKnockoutDraw = predHome === predAway
+  const correctKnockoutWinner = isKnockoutDraw && predictedKnockoutDraw && pred.predictedWinner === match.winner
+
+  if (exactScore && correctKnockoutWinner) return { label: 'Perfecto', color: 'text-yellow-400 bg-yellow-400/10' }
+  if (exactScore) return { label: 'Exacto', color: 'text-brand-primary bg-brand-primary/10' }
+  if (correctWinner && correctKnockoutWinner) return { label: 'Resultado + ganador', color: 'text-blue-400 bg-blue-500/10' }
+  if (correctWinner) return { label: 'Resultado', color: 'text-blue-400 bg-blue-500/10' }
   return { label: 'Fallido', color: 'text-brand-muted bg-brand-elevated' }
 }
+
+const DECIDED_BY_LABELS = { penalties: 'Penales', extra_time: 'Tiempo extra' }
 
 function PredictionCard({ pred }) {
   const { match } = pred
@@ -101,6 +113,20 @@ function PredictionCard({ pred }) {
   const outcome = outcomeLabel(pred, match)
   const homeTeam = match.homeTeam
   const awayTeam = match.awayTeam
+
+  // Show knockout draw pick when the user predicted a tie in a knockout match
+  const isKnockout = match.stage && match.stage !== 'group_stage'
+  const predictedDraw = pred.predictedHomeScore === pred.predictedAwayScore
+  const showDrawPick = isKnockout && predictedDraw && pred.predictedWinner
+
+  const pickedTeam = pred.predictedWinner === 'home'
+    ? (homeTeam?.shortName || 'Local')
+    : (awayTeam?.shortName || 'Visitante')
+  const pickedMethod = DECIDED_BY_LABELS[pred.predictedDecidedBy] || ''
+
+  // Was the knockout draw winner pick correct?
+  const isKnockoutDraw = isKnockout && match.homeScore === match.awayScore && match.winner
+  const winnerCorrect = isKnockoutDraw && pred.predictedWinner === match.winner
 
   return (
     <div className="card mb-3">
@@ -153,9 +179,35 @@ function PredictionCard({ pred }) {
           )}
         </div>
       </div>
+
+      {/* Knockout draw pick */}
+      {showDrawPick && (
+        <div className={`mt-2 pt-2 border-t border-brand-border flex items-center justify-between text-xs`}>
+          <span className="text-brand-muted">
+            Clasificó: <span className="font-semibold text-brand-text">{pickedTeam}</span>
+            {pickedMethod && <span className="text-brand-muted"> · {pickedMethod}</span>}
+          </span>
+          {isKnockoutDraw && (
+            <span className={`font-semibold ${winnerCorrect ? 'text-brand-primary' : 'text-brand-muted'}`}>
+              {winnerCorrect ? '+3 pts' : 'Fallido'}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
+
+const STAGE_FILTER_OPTIONS = [
+  { key: 'all', label: 'Todas' },
+  { key: 'group_stage', label: 'Grupos' },
+  { key: 'round_of_32', label: 'R32' },
+  { key: 'round_of_16', label: 'R16' },
+  { key: 'quarter_final', label: 'QF' },
+  { key: 'semi_final', label: 'SF' },
+  { key: 'third_place', label: '3°' },
+  { key: 'final', label: 'Final' },
+]
 
 export default function UserProfile() {
   const { userId } = useParams()
@@ -163,6 +215,7 @@ export default function UserProfile() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showPredictions, setShowPredictions] = useState(false)
+  const [stageFilter, setStageFilter] = useState('all')
   const [avatarOpen, setAvatarOpen] = useState(false)
 
   useEffect(() => {
@@ -197,6 +250,17 @@ export default function UserProfile() {
 
   const { user, predictions, tournamentPrediction } = data
   const initials = user.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
+
+  const filteredPredictions = useMemo(() => {
+    if (stageFilter === 'all') return predictions
+    return predictions.filter(p => p.match?.stage === stageFilter)
+  }, [predictions, stageFilter])
+
+  // Only show stage filter tabs that have at least one prediction
+  const availableStages = useMemo(() => {
+    const used = new Set(predictions.map(p => p.match?.stage).filter(Boolean))
+    return STAGE_FILTER_OPTIONS.filter(o => o.key === 'all' || used.has(o.key))
+  }, [predictions])
   const ft = user.favoriteTeam
   const isMe = me?._id === userId
 
@@ -258,9 +322,33 @@ export default function UserProfile() {
               <span className="text-brand-muted text-lg">{showPredictions ? '▲' : '▼'}</span>
             </button>
 
-            {showPredictions && predictions.map(pred => (
-              <PredictionCard key={pred._id} pred={pred} />
-            ))}
+            {showPredictions && (
+              <>
+                {/* Stage filter pills */}
+                {availableStages.length > 2 && (
+                  <div className="flex gap-2 pb-3 overflow-x-auto no-scrollbar -mx-4 px-4">
+                    {availableStages.map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setStageFilter(key)}
+                        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors
+                          ${stageFilter === key ? 'bg-brand-primary text-white' : 'bg-brand-elevated text-brand-muted'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {filteredPredictions.length === 0 ? (
+                  <p className="text-center text-brand-muted text-sm py-6">Sin pronosticos en esta fase.</p>
+                ) : (
+                  filteredPredictions.map(pred => (
+                    <PredictionCard key={pred._id} pred={pred} />
+                  ))
+                )}
+              </>
+            )}
           </div>
         ) : (
           <div className="card text-center py-6">

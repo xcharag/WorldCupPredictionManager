@@ -16,7 +16,9 @@
     "seed:matchdays": "node src/seeds/assignMatchdays.js",
     "seed:changelog": "node src/seeds/changelog.js",
     "fix:knockout-points": "node src/seeds/recalculateKnockoutPoints.js",
-    "fix:knockout-points:dry": "node src/seeds/recalculateKnockoutPoints.js --dry-run"
+    "fix:knockout-points:dry": "node src/seeds/recalculateKnockoutPoints.js --dry-run",
+    "fix:knockout-points:resync": "node src/seeds/recalculateKnockoutPoints.js --resync",
+    "fix:knockout-points:resync:dry": "node src/seeds/recalculateKnockoutPoints.js --resync --dry-run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1054.0",

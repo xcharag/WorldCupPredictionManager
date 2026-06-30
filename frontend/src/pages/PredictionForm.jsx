@@ -342,7 +342,7 @@ export default function PredictionForm() {
             {needsWinnerPick && (
               <div className="card mb-4">
                 <p className="text-sm font-semibold mb-1">Es eliminacion directa: tiene que haber un ganador</p>
-                <p className="text-xs text-brand-muted mb-3">Elegi como se define y quien gana. Si aciertas, +2 puntos extra.</p>
+                <p className="text-xs text-brand-muted mb-3">Elegi como se define y quien gana. Si aciertas, +3 puntos extra.</p>
 
                 <p className="text-xs text-brand-muted mb-1">Se define por</p>
                 <div className="flex gap-2 mb-3">

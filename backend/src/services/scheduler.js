@@ -23,9 +23,20 @@ const FD_DURATION_MAP = { REGULAR: 'regular_time', EXTRA_TIME: 'extra_time', PEN
 // extra-time/penalty scores (knockout only) and the final winner/decidedBy.
 // Returns whether a real goal (regular time or extra time) was just scored, so
 // the caller can fire a goal notification — penalty-shootout kicks don't count.
+//
+// API score field semantics (v4, WC 2026):
+//   regularTime — goals in the first 90 min (null during live regular time)
+//   extraTime   — goals scored only during extra time (not cumulative)
+//   penalties   — goals in the penalty shootout only
+//   fullTime    — TOTAL goals across all periods (reg + ET + pens) once finished;
+//                 equals the live score during regular-time play (regularTime is null then)
+//
+// We store match.homeScore = 90-min score, and match.extraTimeHomeScore = cumulative
+// score after ET (reg + ET), so the scoring engine and MatchCard both see the right numbers.
 function applyFdUpdate(match, apiMatch) {
   const score = apiMatch.score || {};
   const fullTime = score.fullTime || {};
+  const regularTime = score.regularTime || {};
   const extraTime = score.extraTime || {};
   const penalties = score.penalties || {};
 
@@ -36,16 +47,28 @@ function applyFdUpdate(match, apiMatch) {
   match.minute = apiMatch.minute ?? match.minute;
   match.injuryTime = apiMatch.injuryTime ?? match.injuryTime;
 
-  if (fullTime.home != null) match.homeScore = fullTime.home;
-  if (fullTime.away != null) match.awayScore = fullTime.away;
-  if (extraTime.home != null) match.extraTimeHomeScore = extraTime.home;
-  if (extraTime.away != null) match.extraTimeAwayScore = extraTime.away;
+  // Use regularTime (pure 90-min score) when available; fall back to fullTime
+  // only during live regular-time play, when regularTime is still null.
+  const regHome = regularTime.home ?? fullTime.home;
+  const regAway = regularTime.away ?? fullTime.away;
+  if (regHome != null) match.homeScore = regHome;
+  if (regAway != null) match.awayScore = regAway;
+
+  // extraTime from the API = goals scored only during ET (not cumulative).
+  // Store the cumulative (reg + ET) so MatchCard can display it correctly.
+  if (extraTime.home != null && regHome != null) {
+    match.extraTimeHomeScore = regHome + extraTime.home;
+    match.extraTimeAwayScore = regAway + extraTime.away;
+  }
+
   if (penalties.home != null) match.penaltyHomeScore = penalties.home;
   if (penalties.away != null) match.penaltyAwayScore = penalties.away;
 
   if (score.winner in FD_WINNER_MAP) match.winner = FD_WINNER_MAP[score.winner];
   if (score.duration in FD_DURATION_MAP) match.decidedBy = FD_DURATION_MAP[score.duration];
 
+  // Goal notification: fire when the running score (cumulative through ET) increases.
+  // Penalty kicks are excluded because extraTimeHomeScore is frozen once ET ends.
   const newLiveHome = match.extraTimeHomeScore ?? match.homeScore;
   const newLiveAway = match.extraTimeAwayScore ?? match.awayScore;
   return (newLiveHome != null && newLiveHome > (oldLiveHome ?? -1)) ||
