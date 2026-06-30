@@ -52,8 +52,16 @@ function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway, p
     points += 1; // +1 one team correct
   }
 
-  // Knockout draw: +2 if the chosen winner (extra time/penalties) matches the real one
-  if (predictedHome === predictedAway && actualWinner && predictedWinner === actualWinner) {
+  // Knockout draw: +2 if the user predicted a draw AND the 90-min score was
+  // also a draw AND their chosen winner matches the team that advanced.
+  // actualHome === actualAway guards against applyFdUpdate setting match.winner
+  // for regular-time wins, which would otherwise fire this bonus incorrectly.
+  if (
+    predictedHome === predictedAway &&
+    actualHome === actualAway &&
+    actualWinner &&
+    predictedWinner === actualWinner
+  ) {
     points += 2;
   }
 

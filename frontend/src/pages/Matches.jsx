@@ -39,6 +39,7 @@ export default function Matches() {
   const [selectedMatchday, setSelectedMatchday] = useState(saved.selectedMatchday ?? null)
   const [filterDate, setFilterDate] = useState(saved.filterDate || '')
   const [filterUnpredicted, setFilterUnpredicted] = useState(urlUnpredicted || saved.filterUnpredicted || false)
+  const [filterBlocked, setFilterBlocked] = useState(saved.filterBlocked || false)
   const [view, setView] = useState(saved.view || 'partidos')
   const [loading, setLoading] = useState(true)
 
@@ -53,8 +54,8 @@ export default function Matches() {
 
   // Persist filter state to sessionStorage whenever it changes
   useEffect(() => {
-    sessionStorage.setItem(FILTERS_KEY, JSON.stringify({ stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, view }))
-  }, [stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, view])
+    sessionStorage.setItem(FILTERS_KEY, JSON.stringify({ stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, filterBlocked, view }))
+  }, [stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, filterBlocked, view])
 
   useEffect(() => {
     Promise.all([api.get('/matches'), api.get('/predictions/mine')])
@@ -93,8 +94,12 @@ export default function Matches() {
       if (matchDay !== filterDate) return false
     }
     if (filterUnpredicted && predictionsByMatch[m._id]) return false
+    if (filterBlocked) {
+      const isLocked = m.status !== 'scheduled' || new Date(m.matchDate).getTime() <= Date.now()
+      if (isLocked) return false
+    }
     return true
-  }), [matches, stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, predictionsByMatch, showGroupFilters])
+  }), [matches, stage, selectedGroups, selectedMatchday, filterDate, filterUnpredicted, filterBlocked, predictionsByMatch, showGroupFilters])
 
   function canEditPrediction(match) {
     if (match.status !== 'scheduled') return false
@@ -224,6 +229,17 @@ export default function Matches() {
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${filterUnpredicted ? 'translate-x-4' : 'translate-x-0'}`} />
           </div>
           <span className="text-xs text-brand-muted">Solo sin predecir</span>
+        </button>
+
+        {/* Bloqueados toggle */}
+        <button
+          onClick={() => setFilterBlocked(v => !v)}
+          className="flex items-center gap-2.5 cursor-pointer select-none w-fit"
+        >
+          <div className={`relative w-9 h-5 rounded-full transition-colors ${filterBlocked ? 'bg-brand-primary' : 'bg-brand-elevated'}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${filterBlocked ? 'translate-x-4' : 'translate-x-0'}`} />
+          </div>
+          <span className="text-xs text-brand-muted">Ocultar bloqueados</span>
         </button>
       </div>
 

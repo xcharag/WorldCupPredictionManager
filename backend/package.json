@@ -14,7 +14,9 @@
     "seed:footballdata:knockout": "node src/seeds/importFootballDataKnockout.js",
     "seed:knockout:numbers": "node src/seeds/assignKnockoutMatchNumbers.js",
     "seed:matchdays": "node src/seeds/assignMatchdays.js",
-    "seed:changelog": "node src/seeds/changelog.js"
+    "seed:changelog": "node src/seeds/changelog.js",
+    "fix:knockout-points": "node src/seeds/recalculateKnockoutPoints.js",
+    "fix:knockout-points:dry": "node src/seeds/recalculateKnockoutPoints.js --dry-run"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1054.0",
