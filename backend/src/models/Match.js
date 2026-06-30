@@ -2,25 +2,22 @@ const mongoose = require('mongoose');
 
 const matchSchema = new mongoose.Schema(
   {
+    // Which season this match belongs to (null = legacy WC2026 before migration)
+    season: { type: mongoose.Schema.Types.ObjectId, ref: 'Season', default: null },
     matchNumber: { type: Number },
-    homeTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },
-    awayTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },
+    // Official tournaments: refs to Team collection
+    homeTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
+    awayTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
+    // Custom tournaments: free-text team names
+    homeTeamName: { type: String, trim: true, default: null },
+    awayTeamName: { type: String, trim: true, default: null },
     matchDate: { type: Date, required: true },
-    stage: {
-      type: String,
-      enum: [
-        'group_stage',
-        'round_of_32',
-        'round_of_16',
-        'quarter_final',
-        'semi_final',
-        'third_place',
-        'final',
-      ],
-      required: true,
-    },
+    // Free string — WC2026 uses the known keys; custom seasons define their own
+    stage: { type: String, required: true },
     group: { type: String }, // e.g. "A", "B" — only for group_stage
     matchday: { type: Number, min: 1 }, // 1, 2, or 3 for group_stage; null for knockout
+    // True for custom-tournament matches where the season creator enters scores manually
+    isManual: { type: Boolean, default: false },
     venue: { type: String, trim: true },
     // Regulation (90 min + stoppage) score — what predictions are graded against.
     homeScore: { type: Number, default: null },

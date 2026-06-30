@@ -54,6 +54,18 @@ export default function GroupDashboard() {
   })
   const [settingsSaving, setSettingsSaving] = useState(false)
 
+  // Scoring config state
+  const [showScoring, setShowScoring] = useState(false)
+  const [scoring, setScoring] = useState({
+    correctOutcome: 2,
+    oneTeamCorrect: 1,
+    exactScoreBonus: 3,
+    knockoutWinnerBonus: 3,
+    extraTimeBonus: 0,
+    penaltiesBonus: 0,
+  })
+  const [scoringSaving, setScoringSaving] = useState(false)
+
   const loadGroup = async () => {
     try {
       const { data } = await api.get(`/groups/${groupId}`)
@@ -64,6 +76,9 @@ export default function GroupDashboard() {
         isPublic: data.isPublic || false,
         acceptJoinRequests: data.acceptJoinRequests || false,
       })
+      if (data.scoringConfig) {
+        setScoring(prev => ({ ...prev, ...data.scoringConfig }))
+      }
     } catch {
       navigate('/groups')
     }
@@ -140,6 +155,20 @@ export default function GroupDashboard() {
         }
       },
     })
+  }
+
+  async function saveScoring() {
+    setScoringSaving(true)
+    try {
+      const { data } = await api.patch(`/groups/${groupId}/scoring`, { scoringConfig: scoring })
+      setGroup(g => ({ ...g, scoringConfig: data.scoringConfig }))
+      addToast('Puntuación guardada', 'success')
+      setShowScoring(false)
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Error al guardar puntuación', 'error')
+    } finally {
+      setScoringSaving(false)
+    }
   }
 
   async function saveSettings() {
@@ -463,6 +492,70 @@ export default function GroupDashboard() {
                   className="btn-primary"
                 >
                   {settingsSaving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Scoring config panel (creator only) */}
+        {isCreator && (
+          <div className="card mb-4">
+            <button
+              type="button"
+              onClick={() => setShowScoring(s => !s)}
+              className="flex items-center justify-between w-full"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <BarChart3 size={15} className="text-brand-muted" /> Puntuación personalizada
+              </span>
+              <ChevronDown
+                size={16}
+                className={`text-brand-muted transition-transform duration-200 ${showScoring ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showScoring && (
+              <div className="mt-4 flex flex-col gap-3">
+                <p className="text-xs text-brand-muted leading-relaxed">
+                  Estos valores reemplazan la puntuación estándar solo para este grupo. Los cambios afectan la tabla de posiciones pero no recalculan puntos históricos automáticamente.
+                </p>
+
+                {[
+                  { key: 'correctOutcome',      label: 'Resultado correcto (W/D/L)', hint: 'Puntos por acertar quién gana o que empata' },
+                  { key: 'oneTeamCorrect',       label: 'Un marcador correcto',      hint: 'Solo uno de los dos goles exactos' },
+                  { key: 'exactScoreBonus',      label: 'Bonus marcador exacto',     hint: 'Suma al resultado correcto cuando ambos goles son exactos' },
+                  { key: 'knockoutWinnerBonus',  label: 'Bonus ganador eliminatoria',hint: 'Cuando el usuario predijo empate en 90min y acertó el clasificado' },
+                  { key: 'extraTimeBonus',       label: 'Bonus tiempo extra',        hint: 'Bonus adicional si predijo ET y fue a ET (0 = desactivado)' },
+                  { key: 'penaltiesBonus',       label: 'Bonus penales',             hint: 'Bonus adicional si predijo penales y fue a penales (0 = desactivado)' },
+                ].map(({ key, label, hint }) => (
+                  <div key={key}>
+                    <label className="block text-xs font-medium text-brand-muted mb-1">{label}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="99"
+                      step="1"
+                      value={scoring[key]}
+                      onChange={e => setScoring(s => ({ ...s, [key]: Number(e.target.value) }))}
+                      className="input w-24 text-center"
+                    />
+                    <p className="text-[10px] text-brand-muted mt-0.5">{hint}</p>
+                  </div>
+                ))}
+
+                <div className="rounded-xl bg-brand-elevated border border-brand-border px-3 py-2 text-xs text-brand-muted leading-relaxed">
+                  Máx. por partido: <span className="font-semibold text-brand-text">{scoring.correctOutcome + scoring.exactScoreBonus} pts</span>
+                  {' · '}Con bono knockout: <span className="font-semibold text-brand-text">{scoring.correctOutcome + scoring.exactScoreBonus + scoring.knockoutWinnerBonus} pts</span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={saveScoring}
+                  disabled={scoringSaving}
+                  className="btn-primary"
+                >
+                  {scoringSaving ? 'Guardando...' : 'Guardar puntuación'}
                 </button>
               </div>
             )}

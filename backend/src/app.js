@@ -21,6 +21,8 @@ const profileRoutes = require('./routes/profile');
 const imageRoutes = require('./routes/images');
 const userRoutes = require('./routes/users');
 const changelogRoutes = require('./routes/changelog');
+const tournamentRoutes = require('./routes/tournaments');
+const seasonRoutes = require('./routes/seasons');
 const { startScheduler } = require('./services/scheduler');
 
 const app = express();
@@ -93,6 +95,8 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/changelog', changelogRoutes);
+app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/seasons', seasonRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));

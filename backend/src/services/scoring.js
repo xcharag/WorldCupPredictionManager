@@ -1,25 +1,15 @@
 /**
  * Scoring logic for match and tournament predictions.
  *
- * Match scoring:
- *   - Correct winner/draw: +2
- *   - Correct exact final result (both scores right): +1 bonus
- *   - One team score correct (only): +1 bonus
- *   - Both team scores correct: +2 bonus (replaces one-team bonus)
- *   Perfect = 2 + 1 + 2 = 5 points
- *
- *   Knockout draws: real knockout matches always need a winner, so when a user
- *   predicts a 90-min draw they also pick who wins in extra time/penalties.
- *   +3 bonus if that pick matches the match's actual winner — on top of the
- *   regular score points above (so a perfectly predicted knockout draw = 5 + 3 = 8).
- *
- * Tournament scoring:
- *   - Champion: +50
- *   - Runner-up: +30
- *   - Top scorer: +30
- *   - Top assister: +20
- *   - Most yellow cards: +20
- *   - Most red cards: +20
+ * Default match scoring (all values configurable per group via scoringConfig):
+ *   correctOutcome:      +2 for correct W/D/L
+ *   oneTeamCorrect:      +1 when exactly one team's score matches
+ *   exactScoreBonus:     +3 on top of correctOutcome when both scores match
+ *                        → perfect score = 2 + 3 = 5 pts
+ *   knockoutWinnerBonus: +3 when user predicted a 90-min draw AND picked the
+ *                        correct team to advance (so a perfect knockout draw = 8 pts)
+ *   extraTimeBonus:      +N if user predicted ET and match went to ET (default 0)
+ *   penaltiesBonus:      +N if user predicted penalties and match went to pens (default 0)
  */
 
 const Match = require('../models/Match');
@@ -27,60 +17,75 @@ const MatchPrediction = require('../models/MatchPrediction');
 const TournamentPrediction = require('../models/TournamentPrediction');
 const Settings = require('../models/Settings');
 
+const DEFAULT_SCORING = {
+  correctOutcome: 2,
+  oneTeamCorrect: 1,
+  exactScoreBonus: 3,
+  knockoutWinnerBonus: 3,
+  extraTimeBonus: 0,
+  penaltiesBonus: 0,
+};
+
 function getOutcome(home, away) {
   if (home > away) return 'home';
   if (away > home) return 'away';
   return 'draw';
 }
 
-function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway, predictedWinner, actualWinner) {
+/**
+ * Calculate points for a single prediction.
+ * scoringConfig overrides individual fields from DEFAULT_SCORING.
+ */
+function calcMatchPoints(predictedHome, predictedAway, actualHome, actualAway, predictedWinner, actualWinner, scoringConfig = {}) {
+  const cfg = { ...DEFAULT_SCORING, ...scoringConfig };
   let points = 0;
 
   const predictedOutcome = getOutcome(predictedHome, predictedAway);
   const actualOutcome = getOutcome(actualHome, actualAway);
 
-  // +2 for correct outcome
-  if (predictedOutcome === actualOutcome) points += 2;
+  if (predictedOutcome === actualOutcome) points += cfg.correctOutcome;
 
   const homeCorrect = predictedHome === actualHome;
   const awayCorrect = predictedAway === actualAway;
 
   if (homeCorrect && awayCorrect) {
-    points += 1; // +1 correct final result
-    points += 2; // +2 correct both scores
+    points += cfg.exactScoreBonus;
   } else if (homeCorrect || awayCorrect) {
-    points += 1; // +1 one team correct
+    points += cfg.oneTeamCorrect;
   }
 
-  // Knockout draw: +3 if the user predicted a draw AND the 90-min score was
-  // also a draw AND their chosen winner matches the team that advanced.
-  // actualHome === actualAway guards against applyFdUpdate setting match.winner
-  // for regular-time wins, which would otherwise fire this bonus incorrectly.
+  // Knockout draw bonus: only fires when user predicted a draw AND 90-min was a draw.
+  // actualHome === actualAway guards against applyFdUpdate setting match.winner for regular wins.
   if (
     predictedHome === predictedAway &&
     actualHome === actualAway &&
     actualWinner &&
     predictedWinner === actualWinner
   ) {
-    points += 3;
+    points += cfg.knockoutWinnerBonus;
   }
 
   return points;
 }
 
-// Calculate & save points for all predictions of a finished match
+// Calculate & save points for all predictions of a finished match.
+// Uses the season's defaultScoringConfig as the canonical stored value.
+// Groups with custom scoring compute their own totals at leaderboard time.
 async function calculateMatchPredictions(matchId) {
-  const match = await Match.findById(matchId);
+  const Season = require('../models/Season');
+  const match = await Match.findById(matchId).populate('season', 'defaultScoringConfig');
   if (!match || match.status !== 'finished' || match.homeScore == null || match.awayScore == null) {
     throw new Error('Match not finished or missing score');
   }
 
+  const seasonCfg = match.season?.defaultScoringConfig || {};
   const predictions = await MatchPrediction.find({ match: matchId });
   const updates = predictions.map((p) => {
     const pts = calcMatchPoints(
       p.predictedHomeScore, p.predictedAwayScore,
       match.homeScore, match.awayScore,
-      p.predictedWinner, match.winner
+      p.predictedWinner, match.winner,
+      seasonCfg
     );
     return MatchPrediction.findByIdAndUpdate(p._id, { points: pts });
   });

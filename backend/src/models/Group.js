@@ -1,6 +1,18 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
+const scoringConfigSchema = new mongoose.Schema(
+  {
+    correctOutcome: { type: Number },
+    oneTeamCorrect: { type: Number },
+    exactScoreBonus: { type: Number },
+    knockoutWinnerBonus: { type: Number },
+    extraTimeBonus: { type: Number },
+    penaltiesBonus: { type: Number },
+  },
+  { _id: false }
+);
+
 const groupSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 50 },
@@ -18,6 +30,10 @@ const groupSchema = new mongoose.Schema(
         createdAt: { type: Date, default: Date.now },
       },
     ],
+    // Which tournament season this group is competing in
+    season: { type: mongoose.Schema.Types.ObjectId, ref: 'Season', default: null },
+    // Per-group scoring override (null fields fall back to season's defaultScoringConfig)
+    scoringConfig: { type: scoringConfigSchema, default: null },
   },
   { timestamps: true }
 );

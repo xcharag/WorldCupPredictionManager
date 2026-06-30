@@ -91,6 +91,7 @@ router.post(
         name: req.body.name,
         creator: req.user._id,
         members: [req.user._id],
+        season: req.body.seasonId || null,
       });
       await group.populate('creator', 'name nickname');
       res.status(201).json(group);
@@ -479,6 +480,38 @@ router.get('/:id/invite-link', protect, async (req, res) => {
     const link = `${process.env.FRONTEND_URL}/join/${group.inviteCode}`;
     res.json({ link, inviteCode: group.inviteCode });
   } catch {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── Scoring config (creator only) ────────────────────────────────────────────
+router.patch('/:id/scoring', protect, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id).populate('season', 'defaultScoringConfig');
+    if (!group) return res.status(404).json({ message: 'Group not found' });
+    if (group.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Only the group creator can change scoring' });
+    }
+
+    const allowed = ['correctOutcome', 'oneTeamCorrect', 'exactScoreBonus', 'knockoutWinnerBonus', 'extraTimeBonus', 'penaltiesBonus'];
+    const incoming = req.body.scoringConfig || req.body;
+    const config = {};
+    for (const key of allowed) {
+      if (incoming[key] !== undefined) {
+        const val = Number(incoming[key]);
+        if (isNaN(val) || val < 0) return res.status(400).json({ message: `Invalid value for ${key}` });
+        config[key] = val;
+      }
+    }
+
+    group.scoringConfig = Object.keys(config).length ? config : null;
+    await group.save();
+
+    const defaults = group.season?.defaultScoringConfig || {};
+    const effective = { correctOutcome: 2, oneTeamCorrect: 1, exactScoreBonus: 3, knockoutWinnerBonus: 3, extraTimeBonus: 0, penaltiesBonus: 0, ...defaults, ...config };
+    res.json({ scoringConfig: group.scoringConfig, effectiveScoringConfig: effective });
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
