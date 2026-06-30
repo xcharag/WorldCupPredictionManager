@@ -92,7 +92,6 @@ function outcomeLabel(pred, match) {
   const exactScore = predHome === realHome && predAway === realAway
   const correctWinner = predWinner === realWinner
 
-  // Knockout draw: user predicted a tie + winner, and the match was actually a draw in 90 min
   const isKnockoutDraw = match.stage !== 'group_stage' && realHome === realAway && match.winner
   const predictedKnockoutDraw = predHome === predAway
   const correctKnockoutWinner = isKnockoutDraw && predictedKnockoutDraw && pred.predictedWinner === match.winner
@@ -104,6 +103,111 @@ function outcomeLabel(pred, match) {
   return { label: 'Fallido', color: 'text-brand-muted bg-brand-elevated' }
 }
 
+// ── Stats computation ────────────────────────────────────────────────────────
+function computeStats(predictions) {
+  // Sort chronologically for streak calculation
+  const sorted = [...predictions]
+    .filter(p => p.match)
+    .sort((a, b) => new Date(a.match.matchDate) - new Date(b.match.matchDate))
+
+  let perfectos = 0, exactos = 0, resultadoGanador = 0, resultado = 0, fallidos = 0
+  let totalPoints = 0
+  let bestStreak = 0, worstStreak = 0, curBest = 0, curWorst = 0
+
+  for (const pred of sorted) {
+    const { label } = outcomeLabel(pred, pred.match)
+    if (label === 'Perfecto')            perfectos++
+    else if (label === 'Exacto')         exactos++
+    else if (label === 'Resultado + ganador') resultadoGanador++
+    else if (label === 'Resultado')      resultado++
+    else                                 fallidos++
+
+    if (pred.points != null) totalPoints += pred.points
+
+    const correct = label !== 'Fallido'
+    if (correct) {
+      curBest++
+      bestStreak = Math.max(bestStreak, curBest)
+      curWorst = 0
+    } else {
+      curWorst++
+      worstStreak = Math.max(worstStreak, curWorst)
+      curBest = 0
+    }
+  }
+
+  return { total: sorted.length, perfectos, exactos, resultadoGanador, resultado, fallidos, totalPoints, bestStreak, worstStreak }
+}
+
+function StatCell({ label, value, valueColor = 'text-brand-text' }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5 py-2">
+      <span className={`text-xl font-extrabold leading-none ${valueColor}`}>{value}</span>
+      <span className="text-[10px] text-brand-muted text-center leading-tight">{label}</span>
+    </div>
+  )
+}
+
+function StatsCard({ predictions }) {
+  const s = useMemo(() => computeStats(predictions), [predictions])
+  if (s.total === 0) return null
+
+  return (
+    <div className="card">
+      <p className="font-semibold text-sm mb-3">Estadísticas</p>
+
+      {/* Outcome breakdown — 3 cols */}
+      <div className="grid grid-cols-3 divide-x divide-brand-border border border-brand-border rounded-xl mb-3">
+        <StatCell label="Perfectos" value={s.perfectos} valueColor="text-yellow-400" />
+        <StatCell label="Exactos" value={s.exactos} valueColor="text-brand-primary" />
+        <StatCell label="Resultado" value={s.resultado + s.resultadoGanador} valueColor="text-blue-400" />
+      </div>
+
+      {/* Second row — 3 cols */}
+      <div className="grid grid-cols-3 divide-x divide-brand-border border border-brand-border rounded-xl mb-3">
+        <StatCell label="Fallidos" value={s.fallidos} valueColor="text-brand-muted" />
+        <StatCell label="Pts partidos" value={s.totalPoints} valueColor="text-brand-primary" />
+        <StatCell label="Total pred." value={s.total} />
+      </div>
+
+      {/* Streaks */}
+      <div className="grid grid-cols-2 divide-x divide-brand-border border border-brand-border rounded-xl">
+        <div className="flex flex-col items-center gap-0.5 py-2 px-1">
+          <div className="flex items-center gap-1">
+            <span className="text-xl font-extrabold text-green-400 leading-none">{s.bestStreak}</span>
+            <span className="text-base">🔥</span>
+          </div>
+          <span className="text-[10px] text-brand-muted text-center leading-tight">Racha correcta más larga</span>
+        </div>
+        <div className="flex flex-col items-center gap-0.5 py-2 px-1">
+          <div className="flex items-center gap-1">
+            <span className="text-xl font-extrabold text-red-400 leading-none">{s.worstStreak}</span>
+            <span className="text-base">❄️</span>
+          </div>
+          <span className="text-[10px] text-brand-muted text-center leading-tight">Racha fallida más larga</span>
+        </div>
+      </div>
+
+      {/* Accuracy bar */}
+      {s.total > 0 && (() => {
+        const pct = Math.round(((s.perfectos + s.exactos + s.resultado + s.resultadoGanador) / s.total) * 100)
+        return (
+          <div className="mt-3">
+            <div className="flex justify-between text-[10px] text-brand-muted mb-1">
+              <span>Precisión (resultado correcto)</span>
+              <span className="font-semibold text-brand-text">{pct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-brand-elevated overflow-hidden">
+              <div className="h-full rounded-full bg-brand-primary transition-all" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        )
+      })()}
+    </div>
+  )
+}
+
+// ── Prediction card ──────────────────────────────────────────────────────────
 const DECIDED_BY_LABELS = { penalties: 'Penales', extra_time: 'Tiempo extra' }
 
 function PredictionCard({ pred }) {
@@ -114,7 +218,6 @@ function PredictionCard({ pred }) {
   const homeTeam = match.homeTeam
   const awayTeam = match.awayTeam
 
-  // Show knockout draw pick when the user predicted a tie in a knockout match
   const isKnockout = match.stage && match.stage !== 'group_stage'
   const predictedDraw = pred.predictedHomeScore === pred.predictedAwayScore
   const showDrawPick = isKnockout && predictedDraw && pred.predictedWinner
@@ -124,7 +227,6 @@ function PredictionCard({ pred }) {
     : (awayTeam?.shortName || 'Visitante')
   const pickedMethod = DECIDED_BY_LABELS[pred.predictedDecidedBy] || ''
 
-  // Was the knockout draw winner pick correct?
   const isKnockoutDraw = isKnockout && match.homeScore === match.awayScore && match.winner
   const winnerCorrect = isKnockoutDraw && pred.predictedWinner === match.winner
 
@@ -147,7 +249,6 @@ function PredictionCard({ pred }) {
 
       {/* Teams row */}
       <div className="flex items-center gap-2">
-        {/* Home */}
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           {homeTeam?.badgeUrl ? (
             <MinioImage src={homeTeam.badgeUrl} alt={homeTeam.shortName} className="w-6 h-6 object-contain flex-shrink-0"
@@ -159,7 +260,6 @@ function PredictionCard({ pred }) {
           <span className="text-sm font-semibold truncate">{homeTeam?.shortName || 'Por definir'}</span>
         </div>
 
-        {/* Scores */}
         <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
           <span className="text-xs text-brand-muted leading-none">Real</span>
           <span className="text-base font-bold">{match.homeScore} – {match.awayScore}</span>
@@ -167,7 +267,6 @@ function PredictionCard({ pred }) {
           <span className="text-sm font-semibold text-brand-primary">{pred.predictedHomeScore} – {pred.predictedAwayScore}</span>
         </div>
 
-        {/* Away */}
         <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
           <span className="text-sm font-semibold truncate">{awayTeam?.shortName || 'Por definir'}</span>
           {awayTeam?.badgeUrl ? (
@@ -182,7 +281,7 @@ function PredictionCard({ pred }) {
 
       {/* Knockout draw pick */}
       {showDrawPick && (
-        <div className={`mt-2 pt-2 border-t border-brand-border flex items-center justify-between text-xs`}>
+        <div className="mt-2 pt-2 border-t border-brand-border flex items-center justify-between text-xs">
           <span className="text-brand-muted">
             Clasificó: <span className="font-semibold text-brand-text">{pickedTeam}</span>
             {pickedMethod && <span className="text-brand-muted"> · {pickedMethod}</span>}
@@ -198,6 +297,7 @@ function PredictionCard({ pred }) {
   )
 }
 
+// ── Stage filter options ─────────────────────────────────────────────────────
 const STAGE_FILTER_OPTIONS = [
   { key: 'all', label: 'Todas' },
   { key: 'group_stage', label: 'Grupos' },
@@ -209,6 +309,7 @@ const STAGE_FILTER_OPTIONS = [
   { key: 'final', label: 'Final' },
 ]
 
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function UserProfile() {
   const { userId } = useParams()
   const { user: me } = useAuth()
@@ -250,19 +351,18 @@ export default function UserProfile() {
 
   const { user, predictions, tournamentPrediction } = data
   const initials = user.name?.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
+  const ft = user.favoriteTeam
+  const isMe = me?._id === userId
 
   const filteredPredictions = useMemo(() => {
     if (stageFilter === 'all') return predictions
     return predictions.filter(p => p.match?.stage === stageFilter)
   }, [predictions, stageFilter])
 
-  // Only show stage filter tabs that have at least one prediction
   const availableStages = useMemo(() => {
     const used = new Set(predictions.map(p => p.match?.stage).filter(Boolean))
     return STAGE_FILTER_OPTIONS.filter(o => o.key === 'all' || used.has(o.key))
   }, [predictions])
-  const ft = user.favoriteTeam
-  const isMe = me?._id === userId
 
   return (
     <div className="page max-w-md mx-auto">
@@ -271,7 +371,6 @@ export default function UserProfile() {
       <div className="px-4 pt-4 space-y-4">
         {/* User card */}
         <div className="card flex items-center gap-4">
-          {/* Avatar */}
           <div
             className={`w-20 h-20 rounded-full overflow-hidden bg-brand-elevated flex items-center justify-center flex-shrink-0 border-2 border-brand-border ${user.avatar ? 'cursor-zoom-in active:scale-95 transition-transform' : ''}`}
             onClick={() => user.avatar && setAvatarOpen(true)}
@@ -285,11 +384,9 @@ export default function UserProfile() {
             )}
           </div>
 
-          {/* Info */}
           <div className="flex-1 min-w-0">
             <p className="font-bold text-lg leading-tight truncate">{user.name}</p>
             <p className="text-brand-muted text-sm">@{user.nickname}</p>
-
             {ft && (
               <div className="flex items-center gap-1.5 mt-1.5">
                 {ft.badgeUrl ? (
@@ -305,10 +402,13 @@ export default function UserProfile() {
           </div>
         </div>
 
+        {/* Stats */}
+        {predictions.length > 0 && <StatsCard predictions={predictions} />}
+
         {/* Tournament predictions */}
         <TournamentSection tp={tournamentPrediction} isMe={isMe} />
 
-        {/* Match predictions section */}
+        {/* Match predictions */}
         {predictions.length > 0 ? (
           <div>
             <button
@@ -316,7 +416,7 @@ export default function UserProfile() {
               className="w-full card flex items-center justify-between text-left active:bg-brand-elevated mb-3"
             >
               <div>
-                <p className="font-semibold">Pronosticos de partidos</p>
+                <p className="font-semibold">Historial de pronosticos</p>
                 <p className="text-xs text-brand-muted mt-0.5">{predictions.length} partidos finalizados</p>
               </div>
               <span className="text-brand-muted text-lg">{showPredictions ? '▲' : '▼'}</span>
@@ -324,7 +424,6 @@ export default function UserProfile() {
 
             {showPredictions && (
               <>
-                {/* Stage filter pills */}
                 {availableStages.length > 2 && (
                   <div className="flex gap-2 pb-3 overflow-x-auto no-scrollbar -mx-4 px-4">
                     {availableStages.map(({ key, label }) => (
